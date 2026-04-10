@@ -108,13 +108,21 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
-.book-cover {
-  width: 64px;
-  height: 96px;
+.book-cover-img {
   object-fit: cover;
   border-radius: 4px;
   flex-shrink: 0;
+}
+
+.book-cover-placeholder {
+  flex-shrink: 0;
+  border-radius: 4px;
   background: var(--bg);
+  border: 1px dashed var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
 }
 
 .book-card-info {
@@ -261,7 +269,7 @@ button:disabled {
 .similar-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 1rem;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -270,6 +278,19 @@ button:disabled {
   color: inherit;
   transition: all 0.2s;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.similar-item-cover {
+  width: 40px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.similar-item .info {
+  flex: 1;
+  min-width: 0;
 }
 
 .similar-item:hover {
@@ -451,6 +472,11 @@ button:disabled {
   font-family: inherit;
   cursor: pointer;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.add-btn {
+  padding: 0.65rem 1.25rem;
+  flex-shrink: 0;
 }
 
 /* Rated books in list */

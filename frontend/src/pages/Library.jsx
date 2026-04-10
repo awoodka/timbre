@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
+import BookCover from '../components/BookCover'
 
 function TopEmotions({ breakdown }) {
   if (!breakdown) return null
@@ -37,9 +38,7 @@ export default function Library() {
       <div className="book-grid">
         {books.map((book) => (
           <Link key={book.id} to={`/book/${book.id}`} className="book-card">
-            {book.cover_image_url && (
-              <img src={book.cover_image_url} alt="" className="book-cover" />
-            )}
+            <BookCover url={book.cover_image_url} />
             <div className="book-card-info">
               <h3>{book.title}</h3>
               <div className="author">{book.author}</div>

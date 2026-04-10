@@ -2,10 +2,12 @@ import { useEffect, useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import StarRating from '../components/StarRating'
+import BookCover from '../components/BookCover'
 
 function BookSearch({ books, onSelect }) {
   const [query, setQuery] = useState('')
-  const [rating, setRating] = useState(4)
+  const [selectedBook, setSelectedBook] = useState(null)
+  const [rating, setRating] = useState(0)
   const [showSuggestions, setShowSuggestions] = useState(false)
   const wrapperRef = useRef(null)
 
@@ -26,10 +28,26 @@ function BookSearch({ books, onSelect }) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  const selectBook = (book) => {
-    onSelect(book.id, rating)
-    setQuery('')
+  const pickBook = (book) => {
+    setSelectedBook(book)
+    setQuery(book.title)
     setShowSuggestions(false)
+  }
+
+  const handleSubmit = () => {
+    if (!selectedBook || rating === 0) return
+    onSelect(selectedBook.id, rating)
+    setSelectedBook(null)
+    setQuery('')
+    setRating(0)
+  }
+
+  const handleQueryChange = (e) => {
+    setQuery(e.target.value)
+    setShowSuggestions(true)
+    if (selectedBook && e.target.value !== selectedBook.title) {
+      setSelectedBook(null)
+    }
   }
 
   return (
@@ -39,8 +57,8 @@ function BookSearch({ books, onSelect }) {
           <input
             type="text"
             value={query}
-            onChange={(e) => { setQuery(e.target.value); setShowSuggestions(true) }}
-            onFocus={() => query.trim() && setShowSuggestions(true)}
+            onChange={handleQueryChange}
+            onFocus={() => { if (!selectedBook && query.trim()) setShowSuggestions(true) }}
             placeholder="Search for a book title or author..."
             className="search-input"
           />
@@ -50,7 +68,7 @@ function BookSearch({ books, onSelect }) {
                 <button
                   key={b.id}
                   className="suggestion-item"
-                  onClick={() => selectBook(b)}
+                  onClick={() => pickBook(b)}
                 >
                   <span className="suggestion-title">{b.title}</span>
                   <span className="suggestion-author">{b.author}</span>
@@ -65,6 +83,13 @@ function BookSearch({ books, onSelect }) {
           )}
         </div>
         <StarRating value={rating} onChange={setRating} />
+        <button
+          onClick={handleSubmit}
+          disabled={!selectedBook || rating === 0}
+          className="add-btn"
+        >
+          Add
+        </button>
       </div>
     </div>
   )
@@ -146,9 +171,7 @@ export default function Home({ ratings, setRatings, results, setResults }) {
               if (!book) return null
               return (
                 <div key={r.book_id} className="rating-row">
-                  {book.cover_image_url && (
-                    <img src={book.cover_image_url} alt="" className="rated-book-cover" />
-                  )}
+                  <BookCover url={book.cover_image_url} size="small" />
                   <Link to={`/book/${book.id}`} className="rated-book-info">
                     <span className="rated-title">{book.title}</span>
                     <span className="rated-author">{book.author}</span>
@@ -182,6 +205,7 @@ export default function Home({ ratings, setRatings, results, setResults }) {
             <div className="similar-list">
               {results.map(({ book, similarity }) => (
                 <Link key={book.id} to={`/book/${book.id}`} className="similar-item">
+                  <BookCover url={book.cover_image_url} size="small" />
                   <div className="info">
                     <h4>{book.title}</h4>
                     <div className="author">{book.author}</div>
