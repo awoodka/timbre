@@ -26,8 +26,11 @@ def build_preference_vector(
       4 → +1.5 (positive)
       5 → +2.5 (strong positive)
 
-    A 3-star rating still contributes positively, just less than a 5-star.
-    Ratings below 2.5 push away from those emotions.
+    Positive ratings add the book's emotion vector (want MORE of these emotions).
+    Negative ratings add the COMPLEMENT (1 - vector), meaning "I want the opposite
+    of this emotional profile." This way a 1-star rating on a high-dread book
+    actively pushes toward low-dread, high-warmth books rather than collapsing
+    to zero.
 
     The result is clamped to non-negative and normalized to a unit vector.
     """
@@ -35,9 +38,15 @@ def build_preference_vector(
 
     for vec, rating in zip(vectors, ratings):
         weight = rating - RATING_MIDPOINT
-        preference += vec * weight
+        if weight >= 0:
+            # Positive: want more of these emotions
+            preference += vec * weight
+        else:
+            # Negative: want the opposite emotional profile
+            complement = 1.0 - vec
+            preference += complement * abs(weight)
 
-    # Clamp to non-negative — can't have negative emotion in the search vector
+    # Clamp to non-negative
     preference = np.clip(preference, 0, None)
 
     # Normalize to unit vector

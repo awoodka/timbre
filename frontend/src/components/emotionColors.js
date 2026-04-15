@@ -1,0 +1,35 @@
+export const EMOTION_COLORS = {
+  isolation:            { bg: '#e8e0f0', color: '#6b5b8a' },
+  wonder:              { bg: '#dce8f5', color: '#4a6fa5' },
+  dread:               { bg: '#f0ddd8', color: '#8a4a3d' },
+  melancholy:          { bg: '#dde4ec', color: '#5a6d82' },
+  warmth:              { bg: '#f5ead8', color: '#9a7a4a' },
+  tension:             { bg: '#f2dcd6', color: '#944e3c' },
+  joy:                 { bg: '#f5ecd0', color: '#8a7a2a' },
+  nostalgia:           { bg: '#ecdee8', color: '#7a5a6e' },
+  anger:               { bg: '#f0d5d5', color: '#943c3c' },
+  serenity:            { bg: '#d8ece0', color: '#4a7a5a' },
+  confusion:           { bg: '#e0daf0', color: '#6a5a90' },
+  empowerment:         { bg: '#d8e8d8', color: '#4a7a4a' },
+  vulnerability:       { bg: '#f0e0e0', color: '#8a5a5a' },
+  absurdity:           { bg: '#e8e0d0', color: '#7a6a3a' },
+  intimacy:            { bg: '#f0dce8', color: '#8a4a6e' },
+  alienation:          { bg: '#dcd8e8', color: '#5a5080' },
+  obsession:           { bg: '#e8d0d8', color: '#804060' },
+  grief:               { bg: '#ddd8e0', color: '#5a5068' },
+  hope:                { bg: '#d8ecd8', color: '#4a804a' },
+  claustrophobia:      { bg: '#e0d4d0', color: '#705040' },
+  vastness:            { bg: '#d4dce8', color: '#4a5a78' },
+  sensuality:          { bg: '#f0d8e0', color: '#904a60' },
+  moral_ambiguity:     { bg: '#ddd4cc', color: '#6a5a48' },
+  frenetic_energy:     { bg: '#f0e0c8', color: '#8a6a2a' },
+  stillness:           { bg: '#d8e4e0', color: '#4a6a60' },
+  pacing:              { bg: '#e0dce0', color: '#606060' },
+  emotional_complexity:{ bg: '#e0d8ec', color: '#5a4a7a' },
+  predictability:      { bg: '#dce0d8', color: '#506850' },
+  catharsis:           { bg: '#d8e0ec', color: '#4a5a7a' },
+}
+
+export function getEmotionColor(key) {
+  return EMOTION_COLORS[key] || { bg: '#e8e0d8', color: '#8a7f76' }
+}

@@ -154,9 +154,8 @@ body {
   font-size: 0.7rem;
   padding: 0.15rem 0.5rem;
   border-radius: 10px;
-  background: var(--accent-light);
-  color: var(--accent);
   white-space: nowrap;
+  font-weight: 500;
 }
 
 /* Detail page */
@@ -346,6 +345,36 @@ button:disabled {
 
 .rating-row .remove-btn:hover {
   color: var(--error);
+}
+
+.confirm-delete {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.confirm-text {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.confirm-yes,
+.confirm-no {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: 4px;
+}
+
+.confirm-yes {
+  background: var(--error);
+  color: white;
+}
+
+.confirm-no {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
 }
 
 /* Star rating */

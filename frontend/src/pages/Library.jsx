@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import BookCover from '../components/BookCover'
+import { getEmotionColor } from '../components/emotionColors'
 
 function TopEmotions({ breakdown }) {
   if (!breakdown) return null
@@ -10,11 +11,18 @@ function TopEmotions({ breakdown }) {
     .slice(0, 3)
   return (
     <div className="emotion-dots">
-      {top.map(([key, val]) => (
-        <span key={key} className="emotion-dot">
-          {key.replace(/_/g, ' ')} {val.toFixed(1)}
-        </span>
-      ))}
+      {top.map(([key, val]) => {
+        const colors = getEmotionColor(key)
+        return (
+          <span
+            key={key}
+            className="emotion-dot"
+            style={{ background: colors.bg, color: colors.color }}
+          >
+            {key.replace(/_/g, ' ')} {val.toFixed(1)}
+          </span>
+        )
+      })}
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import StarRating from '../components/StarRating'
 import BookCover from '../components/BookCover'
+import { getEmotionColor } from '../components/emotionColors'
 
 function BookSearch({ books, onSelect }) {
   const [query, setQuery] = useState('')
@@ -121,9 +122,12 @@ export default function Home({ ratings, setRatings, results, setResults }) {
     setResults(null)
   }
 
+  const [confirmingDelete, setConfirmingDelete] = useState(null)
+
   const removeRating = (idx) => {
     setRatings(ratings.filter((_, i) => i !== idx))
     setResults(null)
+    setConfirmingDelete(null)
   }
 
   const getRecommendations = async () => {
@@ -146,7 +150,7 @@ export default function Home({ ratings, setRatings, results, setResults }) {
       .filter(([, v]) => v >= 0.5)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 4)
-      .map(([k]) => k.replace(/_/g, ' '))
+      .map(([k]) => ({ key: k, label: k.replace(/_/g, ' ') }))
   }
 
   if (booksLoading) return <div className="loading"><span className="spinner" /> Loading...</div>
@@ -177,7 +181,19 @@ export default function Home({ ratings, setRatings, results, setResults }) {
                     <span className="rated-author">{book.author}</span>
                   </Link>
                   <StarRating value={r.rating} onChange={(val) => updateRating(idx, val)} />
-                  <button className="remove-btn" onClick={() => removeRating(idx)}>&times;</button>
+                  {confirmingDelete === idx ? (
+                    <div className="confirm-delete">
+                      <span className="confirm-text">Remove?</span>
+                      <button className="confirm-yes" onClick={() => removeRating(idx)}>Yes</button>
+                      <button className="confirm-no" onClick={() => setConfirmingDelete(null)}>No</button>
+                    </div>
+                  ) : (
+                    <button className="remove-btn" onClick={() => setConfirmingDelete(idx)} title="Remove">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                        <path d="M2 4h12M5.3 4V2.7a1 1 0 011-1h3.4a1 1 0 011 1V4M6.5 7v4.5M9.5 7v4.5M3.5 4l.7 9a1.5 1.5 0 001.5 1.4h4.6a1.5 1.5 0 001.5-1.4l.7-9" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
               )
             })}
@@ -210,9 +226,18 @@ export default function Home({ ratings, setRatings, results, setResults }) {
                     <h4>{book.title}</h4>
                     <div className="author">{book.author}</div>
                     <div className="reason-tags">
-                      {getMatchReasons(book).map((r) => (
-                        <span key={r} className="reason-tag">{r}</span>
-                      ))}
+                      {getMatchReasons(book).map((r) => {
+                        const colors = getEmotionColor(r.key)
+                        return (
+                          <span
+                            key={r.key}
+                            className="reason-tag"
+                            style={{ background: colors.bg, color: colors.color }}
+                          >
+                            {r.label}
+                          </span>
+                        )
+                      })}
                     </div>
                   </div>
                   <span className="similarity-badge">{(similarity * 100).toFixed(1)}% match</span>

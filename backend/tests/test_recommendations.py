@@ -395,7 +395,7 @@ MIXED_RATING_TESTS = [
             ("House of Leaves", 5),    # loves: dread, confusion, obsession
             ("1984", 5),               # loves: dread, claustrophobia, anger
         ],
-        ["The Shining", "Rebecca", "Mexican Gothic"],
+        ["Beloved", "Frankenstein", "Dune"],
         ["The Hobbit", "Piranesi", "The Name of the Wind"],
         "Loves dread+darkness, hates warmth+levity — should get dark books, not cozy ones",
     ),
