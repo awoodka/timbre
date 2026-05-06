@@ -1,8 +1,10 @@
+'use client'
+
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { api } from '../api/client'
-import BookCover from '../components/BookCover'
-import { getEmotionColor } from '../components/emotionColors'
+import Link from 'next/link'
+import { api } from '@/lib/api'
+import BookCover from '@/components/BookCover'
+import { getEmotionColor } from '@/components/emotionColors'
 
 function TopEmotions({ breakdown }) {
   if (!breakdown) return null
@@ -45,7 +47,7 @@ export default function Library() {
       </div>
       <div className="book-grid">
         {books.map((book) => (
-          <Link key={book.id} to={`/book/${book.id}`} className="book-card">
+          <Link key={book.id} href={`/book/${book.id}`} className="book-card">
             <BookCover url={book.cover_image_url} />
             <div className="book-card-info">
               <h3>{book.title}</h3>

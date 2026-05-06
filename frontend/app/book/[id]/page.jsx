@@ -1,8 +1,11 @@
+'use client'
+
 import { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { api } from '../api/client'
-import EmotionRadar from '../components/EmotionRadar'
-import EmotionBar from '../components/EmotionBar'
+import { useParams } from 'next/navigation'
+import Link from 'next/link'
+import { api } from '@/lib/api'
+import EmotionRadar from '@/components/EmotionRadar'
+import EmotionBar from '@/components/EmotionBar'
 
 export default function BookDetail() {
   const { id } = useParams()
@@ -27,7 +30,7 @@ export default function BookDetail() {
 
   return (
     <div className="book-detail">
-      <Link to="/" style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textDecoration: 'none' }}>
+      <Link href="/" style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textDecoration: 'none' }}>
         &larr; Back
       </Link>
 
@@ -74,7 +77,7 @@ export default function BookDetail() {
           <h2 className="section-title">Emotionally Similar Books</h2>
           <div className="similar-list">
             {similar.map(({ book: sim, similarity }) => (
-              <Link key={sim.id} to={`/book/${sim.id}`} className="similar-item">
+              <Link key={sim.id} href={`/book/${sim.id}`} className="similar-item">
                 <div className="info">
                   <h4>{sim.title}</h4>
                   <div className="author">{sim.author}</div>

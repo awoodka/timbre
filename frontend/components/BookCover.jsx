@@ -1,3 +1,5 @@
+import Image from 'next/image'
+
 export default function BookCover({ url, size = 'medium' }) {
   const sizes = {
     small: { width: 40, height: 60 },
@@ -6,7 +8,17 @@ export default function BookCover({ url, size = 'medium' }) {
   const { width, height } = sizes[size] || sizes.medium
 
   if (url) {
-    return <img src={url} alt="" className="book-cover-img" style={{ width, height }} />
+    return (
+      <Image
+        src={url}
+        alt=""
+        width={width}
+        height={height}
+        className="book-cover-img"
+        loading="lazy"
+        unoptimized={false}
+      />
+    )
   }
 
   return (

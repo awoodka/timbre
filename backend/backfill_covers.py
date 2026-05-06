@@ -27,8 +27,8 @@ async def fetch_cover(client: httpx.AsyncClient, title: str, author: str) -> str
         cover_id = docs[0].get("cover_i")
         if not cover_id:
             return ""
-        # Open Library cover API — L = large
-        return f"https://covers.openlibrary.org/b/id/{cover_id}-L.jpg"
+        # Open Library cover API — M = medium (~180px, sufficient for UI)
+        return f"https://covers.openlibrary.org/b/id/{cover_id}-M.jpg"
     except Exception as e:
         logger.warning(f"Failed for '{title}': {e}")
         return ""

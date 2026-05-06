@@ -1,9 +1,12 @@
+'use client'
+
 import { useEffect, useState, useRef } from 'react'
-import { Link } from 'react-router-dom'
-import { api } from '../api/client'
-import StarRating from '../components/StarRating'
-import BookCover from '../components/BookCover'
-import { getEmotionColor } from '../components/emotionColors'
+import Link from 'next/link'
+import { api } from '@/lib/api'
+import { useRatings } from '@/lib/ratings-context'
+import StarRating from '@/components/StarRating'
+import BookCover from '@/components/BookCover'
+import { getEmotionColor } from '@/components/emotionColors'
 
 function BookSearch({ books, onSelect }) {
   const [query, setQuery] = useState('')
@@ -96,11 +99,13 @@ function BookSearch({ books, onSelect }) {
   )
 }
 
-export default function Home({ ratings, setRatings, results, setResults }) {
+export default function Home() {
+  const { ratings, setRatings, results, setResults } = useRatings()
   const [books, setBooks] = useState([])
   const [loading, setLoading] = useState(false)
   const [booksLoading, setBooksLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [confirmingDelete, setConfirmingDelete] = useState(null)
 
   useEffect(() => {
     api.getBooks()
@@ -121,8 +126,6 @@ export default function Home({ ratings, setRatings, results, setResults }) {
     setRatings(updated)
     setResults(null)
   }
-
-  const [confirmingDelete, setConfirmingDelete] = useState(null)
 
   const removeRating = (idx) => {
     setRatings(ratings.filter((_, i) => i !== idx))
@@ -162,10 +165,8 @@ export default function Home({ ratings, setRatings, results, setResults }) {
         <p>Rate books you've read and we'll find ones that feel the same</p>
       </div>
 
-      {/* Add book form */}
       <BookSearch books={available} onSelect={addRating} />
 
-      {/* Rated books */}
       {ratings.length > 0 && (
         <div style={{ marginTop: '1.5rem' }}>
           <h2 className="section-title" style={{ marginTop: 0 }}>Your Rated Books</h2>
@@ -176,7 +177,7 @@ export default function Home({ ratings, setRatings, results, setResults }) {
               return (
                 <div key={r.book_id} className="rating-row">
                   <BookCover url={book.cover_image_url} size="small" />
-                  <Link to={`/book/${book.id}`} className="rated-book-info">
+                  <Link href={`/book/${book.id}`} className="rated-book-info">
                     <span className="rated-title">{book.title}</span>
                     <span className="rated-author">{book.author}</span>
                   </Link>
@@ -211,7 +212,6 @@ export default function Home({ ratings, setRatings, results, setResults }) {
 
       {error && <p style={{ color: 'var(--error)', marginTop: '1rem' }}>{error}</p>}
 
-      {/* Recommendations */}
       {results && (
         <div style={{ marginTop: '2rem' }}>
           <h2 className="section-title" style={{ marginTop: 0 }}>Your Recommendations</h2>
@@ -220,7 +220,7 @@ export default function Home({ ratings, setRatings, results, setResults }) {
           ) : (
             <div className="similar-list">
               {results.map(({ book, similarity }) => (
-                <Link key={book.id} to={`/book/${book.id}`} className="similar-item">
+                <Link key={book.id} href={`/book/${book.id}`} className="similar-item">
                   <BookCover url={book.cover_image_url} size="small" />
                   <div className="info">
                     <h4>{book.title}</h4>
@@ -248,7 +248,6 @@ export default function Home({ ratings, setRatings, results, setResults }) {
         </div>
       )}
 
-      {/* Empty state */}
       {!results && ratings.length === 0 && (
         <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
           <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>
