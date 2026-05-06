@@ -10,4 +10,4 @@ numpy==2.2.1
 alembic==1.14.0
 httpx==0.28.1
 beautifulsoup4==4.12.3
-ddgs==7.5.3
+ddgs==9.0.0

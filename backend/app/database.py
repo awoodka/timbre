@@ -4,16 +4,10 @@ from sqlalchemy import text
 
 from app.config import settings
 
-import ssl as _ssl
-
-_ssl_ctx = _ssl.create_default_context()
-_ssl_ctx.check_hostname = False
-_ssl_ctx.verify_mode = _ssl.CERT_NONE
-
 engine = create_async_engine(
     settings.database_url,
     echo=False,
-    connect_args={"ssl": _ssl_ctx},
+    connect_args={"ssl": False},
 )
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 
