@@ -154,8 +154,36 @@ Return a JSON object with each dimension key mapped to its score.""",
 
 
 def normalize_vector(scores: dict[str, float]) -> list[float]:
-    """Convert scores dict to a normalized unit vector in dimension order."""
+    """Convert scores dict to a normalized unit vector in dimension order.
+
+    Provisional (un-standardized) vector — used so a freshly analyzed book is never
+    null. The stored vector is replaced with a standardized one by
+    app.services.embeddings.recompute_all_embeddings once scores are persisted.
+    """
     vec = np.array([scores[key] for key in DIMENSION_KEYS], dtype=np.float64)
+    norm = np.linalg.norm(vec)
+    if norm > 0:
+        vec = vec / norm
+    return vec.tolist()
+
+
+def compute_centroid(breakdowns: list[dict[str, float]]) -> np.ndarray:
+    """Mean score per dimension across the corpus — the standardization reference."""
+    mat = np.array(
+        [[bd.get(key, 0.0) for key in DIMENSION_KEYS] for bd in breakdowns],
+        dtype=np.float64,
+    )
+    return mat.mean(axis=0)
+
+
+def standardize_vector(scores: dict[str, float], centroid: np.ndarray) -> list[float]:
+    """Mean-center scores against the corpus centroid, then unit-normalize.
+
+    Centering removes the shared 'baseline mood' the whole corpus has in common, so
+    cosine similarity is driven by what DISTINGUISHES a work — which is what lets the
+    space discriminate and lets the arc dimensions actually separate works.
+    """
+    vec = np.array([scores[key] for key in DIMENSION_KEYS], dtype=np.float64) - centroid
     norm = np.linalg.norm(vec)
     if norm > 0:
         vec = vec / norm

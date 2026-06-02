@@ -21,7 +21,7 @@
 
 ## 📍 Where I left off  *(last updated: 2026-06-02)*
 
-**Immediate next step:** center the 6 bipolar dims to [-0.5,+0.5] in `normalize_vector` and rebuild vectors (no re-score) — this makes the new arc dimensions actually separate recommendations. See Concerns §2b.
+**Immediate next step:** DEFERRED by decision (2026-06-02) — do NOT start tuning the algorithm against the current 50-book seed; it's too small and too dark-skewed to tune against without overfitting. The test suite is built and serves as a diagnostic baseline (64/6); the 6 failures (Concerns §3) are a tracked to-do list to revisit AFTER the corpus grows / more media are added. Next real work is implementing more (more books/media), then re-running the suite to see if the issues persist.
 
 **State:** Full stack boots and runs locally. 50 seeded books, all analyzed.
 
@@ -98,7 +98,24 @@
 - **Implemented:** added 2 arc dims (`emotional_trajectory`, `ending_valence`; NUM_DIMENSIONS 29→31), revised both prompts (dominant-signature profile + dominance/sparsity/bipolar scoring), migrated the pgvector column to vector(31), and re-scored all 50 books via `rescore.py` (distills the existing profile — no re-scraping; backup written to `backend/rescore_backup_*.json`). 50/50 succeeded. Tests 20→22 pass.
 - **Win:** arc dims have full 0–1 spread and correctly separate same-emotion/different-ending works at the score level (A Little Life: trajectory 0.00 / ending_valence 0.25 / catharsis 0.10 vs The Book Thief: 0.10 / 0.50 / 0.30). Inflation down modestly (emotional_complexity 0.80→0.67).
 - **Catch (confirmed with data):** the arc info does NOT yet move similarity — cosine(A Little Life, The Book Thief)=0.878 — because the bipolar dims sit in [0,1], so a "descends" score of 0.0 contributes nothing instead of pointing opposite to "rises." Shared grief/melancholy dims dominate the magnitude.
-- **NEXT (agreed direction): center the 6 bipolar dims to [-0.5,+0.5] in `normalize_vector`.** Semantic transform (axis centered at its neutral midpoint), NOT corpus standardization. No re-score needed — just rebuild vectors from stored scores. This is what makes arc actually separate recommendations.
+- **NEXT (originally): center the 6 bipolar dims.** SUPERSEDED by §2c — see below.
+
+### 2c. Measured the embeddings — STANDARDIZATION is the real lever, not bipolar centering  *(2026-06-02)*
+- **Tested three transforms on the live v2 vectors** (mean pairwise cosine across all 50 books; lower = better spread):
+  - raw [0,1]: **0.693**, despair pair (A Little Life ↔ The Book Thief) = 0.878
+  - bipolar-centered only (subtract 0.5 from the 6 axes): **0.638**, despair pair = 0.865 — *barely moves the needle*
+  - standardized (mean-center ALL dims): **−0.016**, despair pair = **0.507** (and A Little Life ↔ The Road 0.348, Book Thief ↔ Road 0.052) — *decisive*
+- **Why:** all vectors sit in the non-negative orthant with a shared dark baseline (melancholy 0.70, dread 0.68, emotional_complexity 0.67 across the corpus), which dominates cosine. Subtracting the per-dimension mean removes that shared "everyone is dark" mass so similarity is driven by what DISTINGUISHES books. Mean-centering all dims also centers the bipolar ones, so it **subsumes** bipolar centering — don't do both.
+- **CORRECTION to §2b:** bipolar centering alone is nearly cosmetic here; the prompt fix made the arc *scores* correct but didn't fix the *geometry*. Standardization fixes the geometry.
+- **DECISION: standardize in vector construction.** Store a corpus **centroid** (mean vector); build `emotion_vector = normalize(scores − centroid)`. No re-score needed — rebuild from stored `emotion_breakdown`. Trade-off: corpus-dependent — recompute the centroid on each full re-score; re-standardize periodically as the (cross-media) library grows. Optional refinement: z-score (also ÷ per-dim stdev) so high-variance dims don't dominate; mean-centering alone already works.
+- **Keep raw scores for display:** `emotion_breakdown` stays the human-readable [0,1] profile; only `emotion_vector` is standardized.
+- **DONE (2026-06-02): standardization implemented and integrated into the pipeline.**
+  - `emotional_analysis.py`: added `compute_centroid()` + `standardize_vector()`; `normalize_vector()` kept as the provisional (pre-standardization) vector.
+  - New `app/services/embeddings.py: recompute_all_embeddings(session)` — recomputes the centroid from the current corpus and rebuilds every `emotion_vector = normalize(scores − centroid)`. Pure arithmetic, no LLM calls.
+  - Pipeline: `books._run_analysis` calls it after every analyze/reanalyze; `rescore.py` calls it at the end; `rebuild_embeddings.py` added for on-demand rebuilds. So the whole corpus is always in one consistent mean-centered space.
+  - `recommend.build_preference_vector` rewritten for centered space: signed weighted sum `Σ vec·(rating−2.5)`, normalized — dropped the old `1−vec` complement and non-negative clamp (artifacts of [0,1] vectors).
+  - **Result on live data:** despair pair 0.878→0.507; `/recommend` on dark inputs returns a coherent dark/grief set (All Quiet 0.61, The Shining, 1984, Never Let Me Go). Tests 22→21 — see "Where I left off"; the suite now encodes the OLD geometry and needs rewriting, NOT the model.
+  - **Scaling caveat:** re-standardizing the whole corpus on every single add is fine now; for a large/cross-media library, optimize (freeze centroid, batch). Optional refinement still open: z-score (÷ per-dim stdev) so high-variance dims don't dominate.
 
 ### 3. Raw SQL string interpolation in `recommend.py`
 - `rated_ids` are interpolated directly into the query string rather than parameterized. Currently the values are server-generated UUIDs (not user free-text), so not exploitable today — but it's a pattern to clean up before any user-supplied data reaches it.
@@ -110,6 +127,15 @@
 - `npm install` reports 5 vulnerabilities (1 moderate, 4 high). Not blocking locally; run `npm audit` and address before deploy.
 
 ---
+
+### 3. Test suite rebuilt as a diagnostic instrument — and the issues it reveals  *(2026-06-02)*
+- **Why the old suite was weak:** `test_recommendations.py` asserted brittle *absolute top-k* membership ("book X must be in book Y's top 5" out of 50) with hand-picked, un-sourced expectations, no test of geometry/standardization, and nothing testing the arc dimensions. It conflated scoring quality with embedding geometry and broke whenever the model changed (not because the model got worse).
+- **New suite** (`backend/tests/`, source-grounded ground truth + citations in `_helpers.py`): `test_geometry.py` (shape, finiteness, unit-norm, discrimination/no-narrow-cone, no dead dims), `test_emotional_similarity.py` (RELATIVE cluster cohesion/separation + ordered triplets, emotion-over-genre, incl. adversarial probes), `test_arc_discrimination.py` (ending_valence vs sourced tragic/uplifting labels, arc separates same-emotion works), `test_recommendation_behavior.py` (preference-vector behavior, cluster-based), `test_dimension_validity.py` (per-book dominant/absent emotions vs consensus, sparsity). Loads the corpus once via a `corpus` fixture. **64 pass / 6 fail** — failures are intentional (the algorithm's to-do list, NOT tests to loosen).
+- **DECISION (2026-06-02): NOT fixing these yet.** The 50-book seed is too small/dark-skewed to tune against without overfitting; revisit once the corpus grows. Suite stays as a diagnostic baseline.
+- **Algorithm issues the suite reveals (to revisit after the corpus grows):**
+  1. **Specific mis-scorings.** `No Longer Human` is over-scored on dread/gothic → it's *negatively* correlated with `Norwegian Wood` (−0.16) yet 0.81 with `Rebecca`, contradicting sourced kinship. `The Year of Magical Thinking` is an orphan (best neighbor only 0.30) — likely scored on obsession/confusion instead of grief. `Flowers for Algernon` ending_valence 0.40 is too soft for a consensus-devastating ending.
+  2. **Residual scoring inflation.** `Beloved` (15), `Fahrenheit 451` (17), `The Secret History` (13), `The Left Hand of Darkness` (13) light up >12 dims ≥0.5 — the prompt fix reduced inflation corpus-wide but not for these.
+  3. **Arc/structural dims can over-join emotionally-different works.** `Beloved`↔`Fahrenheit 451` (0.60) is driven by shared high trajectory/catharsis, not shared emotion. Worth considering a modest down-weight of structural dims, or revisiting their scoring.
 
 ## 💡 Ideas in the pot  *(nuanced / pre-roadmap thinking)*
 

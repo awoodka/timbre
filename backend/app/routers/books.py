@@ -37,6 +37,10 @@ async def _run_analysis(book_id: uuid.UUID, title: str, author: str, db_url: str
                 book.raw_claude_response = result["raw_response"]
                 book.analysis_status = "completed"
                 await session.commit()
+                # Re-standardize the whole corpus against the updated centroid so
+                # every stored vector stays in one consistent mean-centered space.
+                from app.services.embeddings import recompute_all_embeddings
+                await recompute_all_embeddings(session)
     except Exception as e:
         logger.error(f"Analysis failed for {title}: {e}")
         async with async_session() as session:

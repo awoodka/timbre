@@ -17,39 +17,25 @@ def build_preference_vector(
     vectors: list[np.ndarray], ratings: list[float]
 ) -> np.ndarray:
     """
-    Build an emotional preference vector from rated books.
+    Build an emotional preference direction from rated books.
 
-    Midpoint is 2.5 on the 1-5 scale:
-      1 → -1.5 (strong negative)
-      2 → -0.5 (mild negative)
-      3 → +0.5 (mild positive)
-      4 → +1.5 (positive)
-      5 → +2.5 (strong positive)
+    The stored vectors are STANDARDIZED (mean-centered against the corpus centroid),
+    so the natural blend is a signed weighted sum around the rating midpoint (2.5):
+      1 → -1.5   2 → -0.5   3 → +0.5   4 → +1.5   5 → +2.5
 
-    Positive ratings add the book's emotion vector (want MORE of these emotions).
-    Negative ratings add the COMPLEMENT (1 - vector), meaning "I want the opposite
-    of this emotional profile." This way a 1-star rating on a high-dread book
-    actively pushes toward low-dread, high-warmth books rather than collapsing
-    to zero.
+    A positive weight pulls toward a book's emotional direction ("want more of
+    this"); a negative weight subtracts it, pushing toward the opposite direction
+    in the centered space ("want the opposite"). The result is normalized.
 
-    The result is clamped to non-negative and normalized to a unit vector.
+    (No complement / non-negative clamp: those were artifacts of the old [0,1]
+    vectors. In mean-centered space the opposite of a profile is simply its
+    negation, which the signed weight already produces.)
     """
     preference = np.zeros_like(vectors[0])
 
     for vec, rating in zip(vectors, ratings):
-        weight = rating - RATING_MIDPOINT
-        if weight >= 0:
-            # Positive: want more of these emotions
-            preference += vec * weight
-        else:
-            # Negative: want the opposite emotional profile
-            complement = 1.0 - vec
-            preference += complement * abs(weight)
+        preference += vec * (rating - RATING_MIDPOINT)
 
-    # Clamp to non-negative
-    preference = np.clip(preference, 0, None)
-
-    # Normalize to unit vector
     norm = np.linalg.norm(preference)
     if norm > 0:
         preference = preference / norm

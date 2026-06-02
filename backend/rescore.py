@@ -29,6 +29,7 @@ from app.services.emotional_analysis import (
     score_emotional_dimensions,
     normalize_vector,
 )
+from app.services.embeddings import recompute_all_embeddings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -129,6 +130,11 @@ async def main():
                 failed += 1
 
             await asyncio.sleep(PER_BOOK_DELAY_SECONDS)
+
+    # Standardize all vectors against the corpus centroid (mean-centering).
+    async with async_session() as session:
+        n = await recompute_all_embeddings(session)
+        logger.info(f"Standardized {n} embeddings against corpus centroid")
 
     logger.info(f"Re-scoring complete. {ok} succeeded, {failed} failed.")
 
