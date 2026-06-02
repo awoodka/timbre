@@ -5,7 +5,11 @@ const nextConfig = {
   reactStrictMode: true,
   images: {
     remotePatterns: [
+      // Existing seeded covers come from Open Library...
       { protocol: 'https', hostname: 'covers.openlibrary.org' },
+      // ...newly analyzed books get covers from the Google Books API.
+      { protocol: 'https', hostname: 'books.google.com' },
+      { protocol: 'https', hostname: 'books.googleusercontent.com' },
     ],
   },
   async rewrites() {

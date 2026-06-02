@@ -64,26 +64,23 @@ async def generate_emotional_profile(
 
     response = await client.aio.models.generate_content(
         model=MODEL,
-        contents=f"""You are creating an emotional profile for "{title}" by {author}.
+        contents=f"""You are distilling the DOMINANT emotional signature and ARC of "{title}" by {author} — what it characteristically feels like to read — for use in an emotional fingerprint.
 
-Below is context gathered from multiple sources — a publisher description, literary analysis essays, and reviews. Use ALL of this material, combined with your own knowledge of the book, to write a rich emotional profile.
+Below is context gathered from multiple sources. Use it together with your own knowledge of the work.
 
 --- GATHERED CONTEXT ---
 {context_block}
 --- END CONTEXT ---
 
-Using the above context and your own knowledge, write an emotional profile of this book.
+Write 2 short paragraphs (felt experience, not plot) capturing:
+- the DOMINANT, sustained emotional texture — what pervades the experience, its center of gravity; and
+- the ARC: the direction the feeling travels (does it descend, rise, hold, or oscillate?) and how it RESOLVES — the aftertaste it leaves.
 
-Do NOT write a plot summary. Instead, describe:
-- The dominant emotional texture of reading this book
-- How the emotional tone shifts across the arc of the book
-- The atmosphere and tone (e.g., oppressive, dreamlike, frenetic, meditative)
-- What it FEELS like to read it — the reader's internal experience
-- Sensory qualities of the prose (dense, sparse, lyrical, blunt, visceral)
-- The emotional aftertaste — what lingers after finishing
-- Specific emotional moments or qualities highlighted in the analysis essays
+Capture the SHAPE of the experience, not a beat-by-beat recap. A work passes through many fleeting feelings — mention a transient one only if you explicitly flag it as occasional, not characteristic.
 
-Write 3-4 paragraphs focused entirely on the felt experience, not events. Ground your analysis in the source material where possible.""",
+Then end with exactly these two lines:
+Dominant emotions: <3-6 emotions, most dominant first>
+Arc & resolution: <one line: where it starts emotionally → where it lands>""",
         config=types.GenerateContentConfig(
             max_output_tokens=2000,
             temperature=0.7,
@@ -117,17 +114,23 @@ async def score_emotional_dimensions(
 {profile}
 ---
 
-Score the book on each of the following emotional dimensions from 0.0 to 1.0, where 0.0 means this emotion is completely absent from the reading experience and 1.0 means it is an overwhelmingly dominant part of the experience.
+Score the book on each dimension below from 0.0 to 1.0 by HOW MUCH THAT QUALITY DEFINES THE OVERALL, SUSTAINED reading experience — not whether it merely appears at some point.
+
+Anchors (for the emotion dimensions):
+- 0.0 = absent
+- 0.2 = appears in a few moments but is NOT characteristic
+- 0.5 = a recurring, noticeable part of the experience
+- 0.8 = a dominant, pervasive quality
+- 1.0 = overwhelmingly the defining emotion
+
+Be sparse: a transient scene never justifies a high score. Usually only 4-7 emotion dimensions exceed 0.5; the rest should be 0.3 or below.
+
+Several dimensions are BIPOLAR AXES, not present/absent emotions — for these, 0.5 means typical/neutral and you score the book's POSITION on the axis exactly as its description defines 0.0 vs 1.0 (do NOT default them high): pacing, emotional_complexity, predictability, catharsis, emotional_trajectory, ending_valence.
 
 Dimensions:
 {dimensions_text}
 
-IMPORTANT:
-- Score based on the READER'S emotional experience, not the book's themes
-- Most scores should NOT be extreme — use the full 0.0-1.0 range
-- A typical book should have 3-6 dimensions above 0.5 and many near 0.0-0.3
-- Be precise: 0.45 is different from 0.5
-
+Score the reader's felt experience, not the plot. Be precise (0.45 ≠ 0.5).
 Return a JSON object with each dimension key mapped to its score.""",
         config=types.GenerateContentConfig(
             response_mime_type="application/json",

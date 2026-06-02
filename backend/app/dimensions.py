@@ -152,6 +152,20 @@ EMOTIONAL_DIMENSIONS: list[dict] = [
         "name": "Catharsis / Resolution",
         "description": "Whether the experience provides emotional release or leaves you unresolved. 0.0 = raw, open wound, no closure. 1.0 = full emotional release, satisfaction, healing.",
     },
+    # --- Arc / Trajectory Dimensions ---
+    # These capture the SHAPE of the emotional journey, so two works that share a
+    # dominant emotion (e.g. despair) but differ in trajectory land in different
+    # directions in vector space. Bipolar axes: 0.5 = neutral/level.
+    {
+        "key": "emotional_trajectory",
+        "name": "Emotional Trajectory / Arc Direction",
+        "description": "The overall direction the emotional tone travels across the experience. 0.0 = descends into darkness (starts lighter, ends bleaker), 0.5 = stays roughly level, 1.0 = rises toward light (starts darker, ends more hopeful).",
+    },
+    {
+        "key": "ending_valence",
+        "name": "Ending Valence / How It Lands",
+        "description": "The emotional color of how the experience ENDS, independent of the path taken. 0.0 = bleak, tragic, devastating finish. 0.5 = bittersweet or ambiguous. 1.0 = uplifting, triumphant, warm finish.",
+    },
 ]
 
 DIMENSION_KEYS = [d["key"] for d in EMOTIONAL_DIMENSIONS]

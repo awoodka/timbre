@@ -17,15 +17,12 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from app.config import settings
 from app.models.book import Book
-import ssl as _ssl
 
-_ssl_ctx = _ssl.create_default_context()
-_ssl_ctx.check_hostname = False
-_ssl_ctx.verify_mode = _ssl.CERT_NONE
-
+# Match the app's env-driven SSL handling (DB_SSL): off for local Docker,
+# on for managed Postgres. See app/database.py.
 engine = create_async_engine(
     settings.database_url,
-    connect_args={"ssl": _ssl_ctx},
+    connect_args={"ssl": settings.db_ssl},
 )
 TestSession = async_sessionmaker(engine, expire_on_commit=False)
 
