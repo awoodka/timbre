@@ -89,7 +89,74 @@ EXPECTED_ABSENT = [
     ("The Hitchhiker's Guide to the Galaxy", "grief", 6),
 ]
 
-# --- similarity helpers (operate on the `corpus` fixture) -------------------
+# ===========================================================================
+# FILM ground truth (sourced; mirrors the book ground truth above)
+# ===========================================================================
+# Sourcing (retrieved 2026-06): collider.com (most-emotional, soul-crushing,
+# cosmic-horror, best/bleakest/feel-good movie endings), tasteofcinema
+# (atmospheric), rottentomatoes (feel-good). Mood/arc groupings deliberately
+# cross genre — the property the shared cross-media space must capture.
+FILM_CLUSTERS = {
+    "devastation": [
+        "Schindler's List", "Grave of the Fireflies", "Come and See",
+        "Manchester by the Sea", "Requiem for a Dream", "The Road",
+        "12 Years a Slave", "Amour",
+    ],
+    "cozy_uplifting": [
+        "My Neighbor Totoro", "Paddington 2", "Amélie", "Up",
+        "The Shawshank Redemption", "Little Women", "Spirited Away",
+    ],
+    "horror_dread": [
+        "The Thing", "Alien", "The Lighthouse", "Hereditary", "The Shining",
+    ],
+    "melancholy_longing": [
+        "Lost in Translation", "In the Mood for Love", "Her", "Past Lives",
+        "Moonlight", "Call Me by Your Name", "Cinema Paradiso",
+    ],
+    "tension_thriller": [
+        "No Country for Old Men", "Parasite", "Se7en", "Prisoners", "Gone Girl",
+    ],
+    "awe_scifi": [
+        "2001: A Space Odyssey", "Arrival", "Interstellar", "Annihilation",
+    ],
+}
+
+FILM_ARC_TRAGIC = [
+    "Grave of the Fireflies", "Come and See", "Requiem for a Dream", "Amour",
+    "Se7en", "Hereditary", "The Lighthouse", "Nineteen Eighty-Four",
+    "No Country for Old Men", "Prisoners", "The Shining", "Brazil", "Gone Girl",
+    "The Road", "Manchester by the Sea",
+]
+FILM_ARC_UPLIFTING = [
+    "The Shawshank Redemption", "Paddington 2", "Amélie", "My Neighbor Totoro",
+    "Up", "Spirited Away", "Little Women",
+]
+
+FILM_EXPECTED_DOMINANT = [
+    ("The Thing", "dread", 3),
+    ("Grave of the Fireflies", "grief", 3),
+    ("Hereditary", "dread", 3),
+    ("My Neighbor Totoro", "warmth", 4),
+    ("Paddington 2", "warmth", 3),
+    ("Lost in Translation", "melancholy", 3),
+    ("2001: A Space Odyssey", "wonder", 3),
+    ("Parasite", "tension", 4),
+    ("Manchester by the Sea", "grief", 3),
+    ("The Lighthouse", "dread", 3),
+    ("In the Mood for Love", "melancholy", 3),
+    ("Her", "melancholy", 4),
+    ("Se7en", "dread", 3),
+    ("Interstellar", "wonder", 5),
+    ("Schindler's List", "grief", 5),
+]
+FILM_EXPECTED_ABSENT = [
+    ("My Neighbor Totoro", "dread", 6),
+    ("Paddington 2", "dread", 6),
+    ("Amélie", "dread", 6),
+]
+
+
+# --- similarity helpers (operate on a `corpus` fixture — books OR films) -----
 def cosine(a: np.ndarray, b: np.ndarray) -> float:
     na, nb = float(np.linalg.norm(a)), float(np.linalg.norm(b))
     return float(np.dot(a, b) / (na * nb)) if na and nb else 0.0

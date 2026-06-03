@@ -64,6 +64,16 @@ def corpus(_all_media) -> dict:
 
 
 @pytest.fixture(scope="session")
+def film_corpus(_all_media) -> dict:
+    """Films only, keyed by title — mirror of `corpus` for the film suite."""
+    return {
+        m["title"]: {"vec": m["vec"], "scores": m["scores"]}
+        for m in _all_media
+        if m["medium"] == "film"
+    }
+
+
+@pytest.fixture(scope="session")
 def media_corpus(_all_media) -> dict:
     """All media, keyed by (medium, title) — for cross-media tests."""
     return {
