@@ -23,7 +23,7 @@ from pathlib import Path
 from sqlalchemy import select, text
 from app.database import init_db, async_session, engine
 from app.dimensions import NUM_DIMENSIONS
-from app.models.book import Book
+from app.models.media import MediaItem
 from app.services.emotional_analysis import (
     generate_emotional_profile,
     score_emotional_dimensions,
@@ -39,22 +39,22 @@ PER_BOOK_DELAY_SECONDS = 1.5
 
 
 async def backup_current(session) -> Path:
-    books = (await session.execute(select(Book))).scalars().all()
+    items = (await session.execute(select(MediaItem))).scalars().all()
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     path = Path(__file__).parent / f"rescore_backup_{stamp}.json"
     payload = [
         {
             "id": str(b.id),
             "title": b.title,
-            "author": b.author,
+            "creator": b.creator,
             "description": b.description,
             "emotion_breakdown": b.emotion_breakdown,
             "emotion_vector": [float(x) for x in b.emotion_vector] if b.emotion_vector is not None else None,
         }
-        for b in books
+        for b in items
     ]
     path.write_text(json.dumps(payload, indent=2))
-    logger.info(f"Backed up {len(payload)} books -> {path.name}")
+    logger.info(f"Backed up {len(payload)} items -> {path.name}")
     return path
 
 
@@ -65,9 +65,9 @@ async def migrate_vector_width():
     between widths, so a clean re-add is simplest.
     """
     async with engine.begin() as conn:
-        await conn.execute(text("ALTER TABLE books DROP COLUMN IF EXISTS emotion_vector"))
+        await conn.execute(text("ALTER TABLE media DROP COLUMN IF EXISTS emotion_vector"))
         await conn.execute(
-            text(f"ALTER TABLE books ADD COLUMN emotion_vector vector({NUM_DIMENSIONS})")
+            text(f"ALTER TABLE media ADD COLUMN emotion_vector vector({NUM_DIMENSIONS})")
         )
     logger.info(f"emotion_vector column migrated to vector({NUM_DIMENSIONS})")
 
@@ -81,51 +81,55 @@ async def main():
     await migrate_vector_width()
 
     async with async_session() as session:
-        books = (
-            await session.execute(select(Book).where(Book.description.isnot(None)))
+        items = (
+            await session.execute(select(MediaItem).where(MediaItem.description.isnot(None)))
         ).scalars().all()
-        logger.info(f"Re-scoring {len(books)} books (NUM_DIMENSIONS={NUM_DIMENSIONS})...")
+        logger.info(f"Re-scoring {len(items)} items (NUM_DIMENSIONS={NUM_DIMENSIONS})...")
 
         ok, failed = 0, 0
-        for book in books:
-            logger.info(f"[{ok + failed + 1}/{len(books)}] {book.title}")
+        for item in items:
+            logger.info(f"[{ok + failed + 1}/{len(items)}] {item.title}")
             try:
                 # Re-distill the existing profile through the updated prompt
                 # (existing profile fed in as source material — no re-scraping).
                 context = {
-                    "google_books": {},
+                    "metadata": {},
                     "essays": [
                         {
                             "source_title": "Prior synthesized emotional profile",
                             "source_url": "",
-                            "content": book.description,
+                            "content": item.description,
                         }
                     ],
                     "reddit": [],
                 }
-                profile = await generate_emotional_profile(book.title, book.author, context)
-                scores = await score_emotional_dimensions(book.title, book.author, profile)
+                profile = await generate_emotional_profile(
+                    item.medium, item.title, item.creator, context
+                )
+                scores = await score_emotional_dimensions(
+                    item.medium, item.title, item.creator, profile
+                )
                 vector = normalize_vector(scores)
 
-                book.description = profile
-                book.emotion_breakdown = scores
-                book.emotion_vector = vector
-                book.analysis_status = "completed"
+                item.description = profile
+                item.emotion_breakdown = scores
+                item.emotion_vector = vector
+                item.analysis_status = "completed"
 
-                if book.raw_claude_response:
+                if item.raw_response:
                     try:
-                        raw = json.loads(book.raw_claude_response)
+                        raw = json.loads(item.raw_response)
                         raw["profile"] = profile
                         raw["scores"] = scores
-                        book.raw_claude_response = json.dumps(raw, indent=2)
+                        item.raw_response = json.dumps(raw, indent=2)
                     except json.JSONDecodeError:
                         pass
 
                 await session.commit()
                 ok += 1
             except Exception as e:
-                logger.error(f"  Failed: {book.title} -- {e}")
-                book.analysis_status = "failed"
+                logger.error(f"  Failed: {item.title} -- {e}")
+                item.analysis_status = "failed"
                 await session.commit()
                 failed += 1
 

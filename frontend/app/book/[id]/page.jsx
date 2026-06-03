@@ -17,7 +17,7 @@ export default function BookDetail() {
   useEffect(() => {
     setLoading(true)
     Promise.all([
-      api.getBook(id),
+      api.getItem(id),
       api.getSimilar(id, 5).catch(() => []),
     ]).then(([b, s]) => {
       setBook(b)
@@ -35,7 +35,7 @@ export default function BookDetail() {
       </Link>
 
       <h1 style={{ marginTop: '1rem' }}>{book.title}</h1>
-      <div className="author">{book.author}</div>
+      <div className="author">{book.creator}</div>
 
       {book.metadata && (
         <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0.25rem 0 1rem' }}>
@@ -76,11 +76,11 @@ export default function BookDetail() {
         <>
           <h2 className="section-title">Emotionally Similar Books</h2>
           <div className="similar-list">
-            {similar.map(({ book: sim, similarity }) => (
+            {similar.map(({ item: sim, similarity }) => (
               <Link key={sim.id} href={`/book/${sim.id}`} className="similar-item">
                 <div className="info">
                   <h4>{sim.title}</h4>
-                  <div className="author">{sim.author}</div>
+                  <div className="author">{sim.creator}</div>
                 </div>
                 <span className="similarity-badge">{(similarity * 100).toFixed(1)}% match</span>
               </Link>

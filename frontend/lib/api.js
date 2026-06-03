@@ -13,11 +13,11 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  getBooks: () => request('/books'),
-  getBook: (id) => request(`/books/${id}`),
-  getSimilar: (id, limit = 5) => request(`/books/${id}/similar?limit=${limit}`),
-  createBook: (data) => request('/books', { method: 'POST', body: JSON.stringify(data) }),
-  reanalyze: (id) => request(`/books/${id}/reanalyze`, { method: 'POST' }),
+  getMedia: () => request('/media'),
+  getItem: (id) => request(`/media/${id}`),
+  getSimilar: (id, limit = 5) => request(`/media/${id}/similar?limit=${limit}`),
+  createItem: (data) => request('/media', { method: 'POST', body: JSON.stringify(data) }),
+  reanalyze: (id) => request(`/media/${id}/reanalyze`, { method: 'POST' }),
   recommend: (ratings, limit = 10) =>
     request('/recommend', { method: 'POST', body: JSON.stringify({ ratings, limit }) }),
   getDimensions: () => request('/dimensions'),

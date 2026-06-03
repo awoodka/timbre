@@ -34,7 +34,7 @@ export default function Library() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.getBooks().then(setBooks).finally(() => setLoading(false))
+    api.getMedia().then(setBooks).finally(() => setLoading(false))
   }, [])
 
   if (loading) return <div className="loading"><span className="spinner" /> Loading books...</div>
@@ -51,7 +51,7 @@ export default function Library() {
             <BookCover url={book.cover_image_url} />
             <div className="book-card-info">
               <h3>{book.title}</h3>
-              <div className="author">{book.author}</div>
+              <div className="author">{book.creator}</div>
               <TopEmotions breakdown={book.emotion_breakdown} />
             </div>
           </Link>

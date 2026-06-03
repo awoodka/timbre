@@ -10,15 +10,23 @@ from app.database import Base
 from app.dimensions import NUM_DIMENSIONS
 
 
-class Book(Base):
-    __tablename__ = "books"
+class MediaItem(Base):
+    """A single work of any medium (book, film, show, game, ...).
+
+    The emotional pipeline is medium-agnostic; `medium` selects the context
+    source and tunes prompt wording. Medium-specific fields live in `metadata_`.
+    """
+
+    __tablename__ = "media"
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
+    medium: Mapped[str] = mapped_column(String(20), nullable=False, default="book")
     title: Mapped[str] = mapped_column(String(500), nullable=False)
-    author: Mapped[str] = mapped_column(String(500), nullable=False)
-    isbn: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    creator: Mapped[str] = mapped_column(String(500), nullable=False)
+    # External source id (ISBN for books, TMDB id for films, etc.)
+    external_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     cover_image_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     metadata_: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)
@@ -26,7 +34,7 @@ class Book(Base):
         Vector(NUM_DIMENSIONS), nullable=True
     )
     emotion_breakdown: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    raw_claude_response: Mapped[str | None] = mapped_column(Text, nullable=True)
+    raw_response: Mapped[str | None] = mapped_column(Text, nullable=True)
     analysis_status: Mapped[str] = mapped_column(
         String(20), default="pending", nullable=False
     )

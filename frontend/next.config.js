@@ -10,6 +10,8 @@ const nextConfig = {
       // ...newly analyzed books get covers from the Google Books API.
       { protocol: 'https', hostname: 'books.google.com' },
       { protocol: 'https', hostname: 'books.googleusercontent.com' },
+      // Film posters from TMDB.
+      { protocol: 'https', hostname: 'image.tmdb.org' },
     ],
   },
   async rewrites() {

@@ -4,23 +4,21 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 
-class BookCreate(BaseModel):
+class MediaCreate(BaseModel):
+    medium: str = "book"
     title: str
-    author: str
-    isbn: str | None = None
+    creator: str
+    external_id: str | None = None
     cover_image_url: str | None = None
     metadata: dict | None = None
 
 
-class EmotionBreakdown(BaseModel):
-    model_config = {"extra": "allow"}
-
-
-class BookResponse(BaseModel):
+class MediaResponse(BaseModel):
     id: UUID
+    medium: str
     title: str
-    author: str
-    isbn: str | None
+    creator: str
+    external_id: str | None
     description: str | None
     cover_image_url: str | None
     metadata: dict | None
@@ -32,29 +30,30 @@ class BookResponse(BaseModel):
     model_config = {"from_attributes": True}
 
     @classmethod
-    def from_orm_book(cls, book) -> "BookResponse":
+    def from_orm_item(cls, item) -> "MediaResponse":
         return cls(
-            id=book.id,
-            title=book.title,
-            author=book.author,
-            isbn=book.isbn,
-            description=book.description,
-            cover_image_url=book.cover_image_url,
-            metadata=book.metadata_,
-            emotion_vector=list(book.emotion_vector) if book.emotion_vector is not None else None,
-            emotion_breakdown=book.emotion_breakdown,
-            analysis_status=book.analysis_status,
-            created_at=book.created_at,
+            id=item.id,
+            medium=item.medium,
+            title=item.title,
+            creator=item.creator,
+            external_id=item.external_id,
+            description=item.description,
+            cover_image_url=item.cover_image_url,
+            metadata=item.metadata_,
+            emotion_vector=list(item.emotion_vector) if item.emotion_vector is not None else None,
+            emotion_breakdown=item.emotion_breakdown,
+            analysis_status=item.analysis_status,
+            created_at=item.created_at,
         )
 
 
-class BookSimilarResponse(BaseModel):
-    book: BookResponse
+class MediaSimilarResponse(BaseModel):
+    item: MediaResponse
     similarity: float
 
 
 class RatingInput(BaseModel):
-    book_id: UUID
+    media_id: UUID
     rating: float = Field(ge=1, le=5)
 
 

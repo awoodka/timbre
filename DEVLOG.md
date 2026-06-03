@@ -21,7 +21,7 @@
 
 ## 📍 Where I left off  *(last updated: 2026-06-02)*
 
-**Immediate next step:** DEFERRED by decision (2026-06-02) — do NOT start tuning the algorithm against the current 50-book seed; it's too small and too dark-skewed to tune against without overfitting. The test suite is built and serves as a diagnostic baseline (64/6); the 6 failures (Concerns §3) are a tracked to-do list to revisit AFTER the corpus grows / more media are added. Next real work is implementing more (more books/media), then re-running the suite to see if the issues persist.
+**Immediate next step:** film is DONE and the cross-media thesis is validated (§4c). Candidate next moves: (a) add the next medium — **TV via TMDB** (nearly identical to film; mind the series/season unit) — then anime/manga, games, music per the roadmap; (b) the now-larger 100-item corpus may be enough to revisit the parked book-scoring issues (Concerns §3) — re-run the suite and judge. Decide based on whether breadth (more media) or quality (tuning) matters more next.
 
 **State:** Full stack boots and runs locally. 50 seeded books, all analyzed.
 
@@ -65,10 +65,31 @@
 - **Gemini 2.5 Flash** for emotional scoring.
 - **29 emotional dimensions, intentionally media-agnostic** — so the same fingerprint extends to games/film/manga/music later (cross-media is the endgame).
 
+### 4b. Generalized the foundation: Book → MediaItem (cross-media groundwork)  *(2026-06-02)*
+- **Why:** the 31-dim fingerprint was always meant to be media-agnostic; this makes adding a medium a plug-in, not a rewrite — done BEFORE implementing any new medium so each one lands cleanly.
+- **Data model:** `Book` → `MediaItem` (table `books` → `media`); `author`→`creator`, `isbn`→`external_id`, `raw_claude_response`→`raw_response`, new `medium` field (default 'book'). One-time idempotent migration `backend/migrate_to_media.py` renamed in place — 50 rows + their LLM vectors preserved (verified 50→50).
+- **Context sources are now a per-medium adapter:** `app/services/sources/` — `__init__.gather_context(medium, title, creator)` + `MEDIUM_NOUNS` + a `_METADATA_FETCHERS` registry; `book.py` is the Google Books fetcher; `web.py` is the shared (medium-aware) essay+Reddit scraper. **To add a medium: write one `fetch_metadata` and register it.**
+- **Pipeline/API generalized:** `analyze_book`→`analyze_media(medium, …)` (prompts use the medium noun + "creator"/"audience"); router `/api/books`→`/api/media`; schemas `Media{Create,Response,SimilarResponse}` (wrapper field `book`→`item`); `RatingInput.book_id`→`media_id`. Frontend points at `/api/media`, uses `creator`, aliases `{item}`→`book` in JSX so the UI was untouched (still book-flavored copy for now).
+- **Verified behavior-preserving:** test suite returns the identical 64/6; `/api/media`, `/similar`, `/recommend` all work; frontend hot-reloaded clean.
+
+### 4c. Film implemented — cross-media thesis VALIDATED  *(2026-06-02)*
+- **Shipped (shared pipeline, no separate one):** `app/services/sources/film.py` (TMDB `fetch_metadata` with remake disambiguation by director — needed: "Solaris" returns the 2002 remake at higher popularity than Tarkovsky's 1972); registered `"film"` in `_METADATA_FETCHERS`; `tmdb_api_key` in config/.env; `image.tmdb.org` whitelisted; 50 canonical+diverse `SEED_FILMS` (dedup by `(medium,title)` so film adaptations aren't skipped by namesake books); §6 craft hint in the profile prompt (visual media factor cinematography/color/score — confirmed working). **Bug fixed:** `seed`/`_run_analysis` never persisted `cover_image_url` from the analysis result (books were masked by the Open Library backfill); now saved.
+- **Seeded + analyzed all 50 films, 0 failures.** Corpus is now 100 items (50 books + 50 films) standardized in ONE shared space.
+- **Cross-media validation (the thesis test):** 8/10 novel↔film pairs land clearly nearer their source novel than an emotionally-opposite book — Gone Girl film↔novel 0.85, Never Let Me Go 0.85, The Shining 0.69, Solaris 0.69, Annihilation 0.60, Rebecca 0.61, The Book Thief 0.56, The Road 0.48 — while film↔Hobbit is strongly negative. The medium-dominates failure mode did NOT occur. Live rec: rate *The Shining* (film) → returns The Thing/Alien (films) + Haunting of Hill House/Mexican Gothic + The Shining (book). Cross-media recommendation works.
+- **Informative outliers:** The Great Gatsby film↔novel ≈ 0 (Luhrmann's maximalist spectacle genuinely feels unlike the wistful novel — the engine correctly detected adaptation divergence, NOT a bug); The Book Thief a near-tie (straddles grief/warmth).
+- **Tests: 73 pass / 5 fail.** New `test_cross_media.py` fully green. The previously-orphaned *The Year of Magical Thinking* now PASSES — adding films re-centered the space and gave it a real neighbor (more data helps, as predicted). The 5 remaining failures are the same parked book-scoring issues (Concerns §3). `conftest` now exposes `corpus` (books, by title) + `media_corpus` (all, by `(medium,title)`) to handle book/film title collisions.
+
 ### 5. Recommendation math (design rationale, recorded for context)
 - **Two-step LLM pipeline:** (1) synthesize a prose *emotional profile* from gathered context (Google Books description + scraped essays + Reddit reactions), then (2) score that profile on the 29 dimensions. Separating "understand the vibe" from "score it" keeps scoring more grounded.
 - **Preference vector:** ratings use midpoint 2.5. Positive ratings add the book's vector ("more of this"); negative ratings add the *complement* `1 - v` ("the opposite of this"), so a 1-star on a high-dread book actively pushes toward low-dread instead of collapsing to zero. Result is clamped ≥0 and normalized; similarity via pgvector cosine distance.
 - **Why noted:** This is the conceptual heart of the product. Any change here changes what "feels similar" means.
+
+---
+
+### 6. Cross-media vector space = shared felt core (approach #1)  *(2026-06-02)*
+- **Decision:** all media embed into ONE shared, medium-agnostic vector (the current felt/structural dims, possibly + universal felt emotions like disgust/beauty/flow). Medium-specific aesthetic channels (color, score, panel layout, agency, tempo…) are NOT dimensions — they are INPUTS the LLM uses when scoring the shared felt dims (a cold, drone-scored film simply scores higher `dread`).
+- **Why:** cross-media recommendation ("this game feels like Norwegian Wood") is the killer feature and needs every medium in one space. **Rejected alternative — zero-pad medium-specific dims (N/A → 0):** under cosine + standardization it makes *medium* the dominant signal and collapses cross-media similarity. The padded blocks act like a one-hot medium tag (a book can never match a film's color dims, so cross-media cosine is strictly deflated by `|shared|/|total|`); and mean-centering turns each medium's zero-block into a shared per-medium offset that clusters items by medium. It also re-introduces the 0≠absent bug for bipolar aesthetic axes (0 = "maximally cool", not "N/A"). Don't revisit zero-padding.
+- **Status:** adopting for film (first medium). Aesthetic richness is preserved via the LLM scoring inputs now, and a future dual-vector later (see Ideas).
 
 ---
 
@@ -145,7 +166,29 @@
 - **Agentic re-ranking.** Retrieve ~20 by vector similarity, then have an LLM pick the best 5 and *explain* the match in natural language ("a shared kind of loneliness — surrounded by people who don't understand you"). The explanation may be as valuable as the ranking.
 - **Natural-language emotional queries.** "Something that feels like a warm bath after a long day" → embed the query against profiles. Depends on dual embeddings.
 - **Personal emotional taste profiles.** Aggregate a user's rating history into an average fingerprint — both for better recs and as a "this is your emotional taste" visualization.
-- **Cross-media (the endgame).** Books are just medium #1. The 29 dimensions are media-agnostic on purpose. Validate they hold up across games/film/manga/music before committing to the cross-media promise.
+- **Cross-media (the endgame).** Books are just medium #1. The dimensions are media-agnostic on purpose. Validate they hold up across games/film/manga/music before committing to the cross-media promise.
+
+### Cross-media implementation roadmap  *(agreed 2026-06-02)*
+Implement each medium independently, **least → most difficult** (difficulty driven by: clean metadata API? self-contained unit? narrative-arc fit? experience variance?):
+1. **Film** — TMDB; clean unit, perfect arc fit. FIRST.
+2. **TV shows** — TMDB; series/season unit problem, long arcs.
+3. **Anime / Manga** — AniList/Jikan; best emotional discourse online; long-series unit problem.
+4. **Video games** — RAWG/IGDB; agency + runtime variance + mechanical (non-text) emotion.
+5. **Music** — Spotify (valence/energy audio features!)/MusicBrainz/Genius; mood-only, non-narrative — the conceptual frontier, LAST.
+The big divide: narrative media (film/TV/anime/manga/games) fit the arc model; mood-only media (music) don't.
+
+### Medium-specific emotional dimensions — brainstorm  *(2026-06-02; integration into one vector space is the NEXT problem, deliberately not solved yet)*
+Key reframe — the "new dimensions" a medium adds are TWO different kinds:
+- **(A) Universal felt emotions the book-only seed under-sampled** — e.g. disgust/revulsion, aesthetic beauty, flow/absorption, groove/bodily-pleasure, startle (acute fear-spike vs slow dread), frustration, earned-mastery, camaraderie. A book CAN evoke these; adding them keeps ONE shared space, just richer.
+- **(B) Medium-bound aesthetic/sensory channels** — genuinely undefined for some media (a book has no color value). These are the hard part of the single-space problem.
+Per-medium (B) channels: **Film/TV** color temperature/saturation/luminance, image texture, shot intimacy, camera kineticism, score prominence, sonic density/silence, spectacle (+ TV: serialized investment, episodic rhythm). **Anime** + visual expressionism/exaggeration, symbolic color. **Manga/comics** ink/tonal heaviness, line energy, panel rhythm, negative space ("ma"), stylization (no sound/motion, mostly B&W). **Games** agency/control, challenge/mastery/flow, immersion/presence, compulsion/reward-loop, exploratory freedom, consequence/choice-weight (+ film's audio/visual). **Music** tempo, energy, valence, danceability/groove, acousticness/timbre, loudness/dynamics, dissonance, production density — many measurable via Spotify; structural/sonic-arc dims (pacing→tempo, catharsis→build/drop) port, narrative dims don't.
+Judgment that matters: aesthetic channels mostly FEED the existing 31 felt dims (a desaturated film already scores high dread). Their marginal value is WITHIN-medium discrimination (two cozy films, warm-lit vs cold-lit, should differ). Decide per dimension whether that discrimination is worth breaking the shared space.
+
+### Incorporating medium-specific aesthetics later (DEFERRED — keep, don't lose)
+Decision §6 starts with the shared felt core only (aesthetics feed the LLM scoring, not separate dims). These richer approaches are deliberately parked for when WITHIN-medium discrimination matters — they're how Timbre eventually captures what makes each medium unique (color/music in film, timbre/groove in music, agency in games — see the dimension brainstorm above). Do NOT lose these:
+- **Primary path — DUAL-VECTOR** (generalizes the roadmap's dual-embedding): each `MediaItem` keeps the shared emotional vector (used for ALL cross-media similarity/recs) PLUS an optional, nullable **`aesthetic_vector`** holding medium-specific channels (film: color temp/saturation/luminance + score prominence; music: tempo/energy/valence/danceability/timbre — many free from Spotify audio features; games: agency/challenge/immersion). Cross-media queries use the shared vector; within-medium queries blend or re-rank with the aesthetic vector. **Additive on the current foundation:** a nullable `aesthetic_vector` column + a small per-medium aesthetic-dimension registry; no change to the shared space. Pairs naturally with agentic re-ranking (shared core retrieves → aesthetic vector / LLM re-ranks + explains).
+- **Other options considered:** masked / medium-aware similarity (compare only dims applicable to BOTH items); neutral-imputation (set N/A dims to the axis neutral/mean, not 0 — kills the 0≠absent bug but only partially fixes medium-dominance).
+- **Trigger to revisit:** when two works that match on felt-emotion but differ aesthetically feel wrongly identical, OR when adding **music** (Spotify audio features are a ready-made aesthetic vector and a natural first dual-vector medium).
 
 ---
 

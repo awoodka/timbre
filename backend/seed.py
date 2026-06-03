@@ -11,8 +11,9 @@ import argparse
 import logging
 
 from app.database import init_db, async_session
-from app.models.book import Book
-from app.services.emotional_analysis import analyze_book
+from app.models.media import MediaItem
+from app.services.emotional_analysis import analyze_media
+from app.services.embeddings import recompute_all_embeddings
 from sqlalchemy import select
 
 logging.basicConfig(level=logging.INFO)
@@ -91,52 +92,136 @@ SEED_BOOKS = [
 ]
 
 
+SEED_FILMS = [
+    # --- Devastation / grief / war ---
+    {"title": "Schindler's List", "director": "Steven Spielberg", "metadata_": {"year": 1993, "genre": ["war", "historical", "drama"]}},
+    {"title": "Grave of the Fireflies", "director": "Isao Takahata", "metadata_": {"year": 1988, "genre": ["animation", "war", "drama"]}},
+    {"title": "Come and See", "director": "Elem Klimov", "metadata_": {"year": 1985, "genre": ["war", "drama"]}},
+    {"title": "Manchester by the Sea", "director": "Kenneth Lonergan", "metadata_": {"year": 2016, "genre": ["drama"]}},
+    {"title": "Requiem for a Dream", "director": "Darren Aronofsky", "metadata_": {"year": 2000, "genre": ["drama", "psychological"]}},
+    {"title": "The Road", "director": "John Hillcoat", "metadata_": {"year": 2009, "genre": ["post-apocalyptic", "drama"]}},
+    {"title": "12 Years a Slave", "director": "Steve McQueen", "metadata_": {"year": 2013, "genre": ["historical", "drama"]}},
+    {"title": "Amour", "director": "Michael Haneke", "metadata_": {"year": 2012, "genre": ["drama", "romance"]}},
+
+    # --- Cosmic / atmospheric / horror ---
+    {"title": "The Thing", "director": "John Carpenter", "metadata_": {"year": 1982, "genre": ["horror", "science fiction"]}},
+    {"title": "Annihilation", "director": "Alex Garland", "metadata_": {"year": 2018, "genre": ["science fiction", "horror"]}},
+    {"title": "The Lighthouse", "director": "Robert Eggers", "metadata_": {"year": 2019, "genre": ["horror", "psychological"]}},
+    {"title": "Hereditary", "director": "Ari Aster", "metadata_": {"year": 2018, "genre": ["horror"]}},
+    {"title": "Stalker", "director": "Andrei Tarkovsky", "metadata_": {"year": 1979, "genre": ["science fiction", "drama"]}},
+    {"title": "Solaris", "director": "Andrei Tarkovsky", "metadata_": {"year": 1972, "genre": ["science fiction", "drama"]}},
+    {"title": "The Shining", "director": "Stanley Kubrick", "metadata_": {"year": 1980, "genre": ["horror", "psychological"]}},
+    {"title": "Alien", "director": "Ridley Scott", "metadata_": {"year": 1979, "genre": ["science fiction", "horror"]}},
+
+    # --- Dystopia / oppressive ---
+    {"title": "Blade Runner", "director": "Ridley Scott", "metadata_": {"year": 1982, "genre": ["science fiction", "cyberpunk"]}},
+    {"title": "Children of Men", "director": "Alfonso Cuarón", "metadata_": {"year": 2006, "genre": ["science fiction", "dystopian"]}},
+    {"title": "Nineteen Eighty-Four", "director": "Michael Radford", "metadata_": {"year": 1984, "genre": ["science fiction", "dystopian"]}},
+    {"title": "Brazil", "director": "Terry Gilliam", "metadata_": {"year": 1985, "genre": ["science fiction", "dystopian"]}},
+
+    # --- Melancholy / longing ---
+    {"title": "Lost in Translation", "director": "Sofia Coppola", "metadata_": {"year": 2003, "genre": ["drama", "romance"]}},
+    {"title": "In the Mood for Love", "director": "Wong Kar-wai", "metadata_": {"year": 2000, "genre": ["drama", "romance"]}},
+    {"title": "Her", "director": "Spike Jonze", "metadata_": {"year": 2013, "genre": ["science fiction", "romance"]}},
+    {"title": "Eternal Sunshine of the Spotless Mind", "director": "Michel Gondry", "metadata_": {"year": 2004, "genre": ["science fiction", "romance"]}},
+    {"title": "Moonlight", "director": "Barry Jenkins", "metadata_": {"year": 2016, "genre": ["drama"]}},
+    {"title": "Past Lives", "director": "Celine Song", "metadata_": {"year": 2023, "genre": ["drama", "romance"]}},
+    {"title": "Call Me by Your Name", "director": "Luca Guadagnino", "metadata_": {"year": 2017, "genre": ["drama", "romance"]}},
+
+    # --- Cozy / warm / wonder / uplift ---
+    {"title": "My Neighbor Totoro", "director": "Hayao Miyazaki", "metadata_": {"year": 1988, "genre": ["animation", "fantasy", "family"]}},
+    {"title": "Spirited Away", "director": "Hayao Miyazaki", "metadata_": {"year": 2001, "genre": ["animation", "fantasy"]}},
+    {"title": "The Grand Budapest Hotel", "director": "Wes Anderson", "metadata_": {"year": 2014, "genre": ["comedy", "drama"]}},
+    {"title": "Amélie", "director": "Jean-Pierre Jeunet", "metadata_": {"year": 2001, "genre": ["comedy", "romance"]}},
+    {"title": "Paddington 2", "director": "Paul King", "metadata_": {"year": 2017, "genre": ["family", "comedy"]}},
+    {"title": "Up", "director": "Pete Docter", "metadata_": {"year": 2009, "genre": ["animation", "adventure", "family"]}},
+    {"title": "Little Women", "director": "Greta Gerwig", "metadata_": {"year": 2019, "genre": ["drama", "romance"]}},
+    {"title": "Cinema Paradiso", "director": "Giuseppe Tornatore", "metadata_": {"year": 1988, "genre": ["drama", "romance"]}},
+    {"title": "The Shawshank Redemption", "director": "Frank Darabont", "metadata_": {"year": 1994, "genre": ["drama"]}},
+
+    # --- Tension / thriller ---
+    {"title": "No Country for Old Men", "director": "Joel Coen", "metadata_": {"year": 2007, "genre": ["thriller", "crime"]}},
+    {"title": "Parasite", "director": "Bong Joon-ho", "metadata_": {"year": 2019, "genre": ["thriller", "drama"]}},
+    {"title": "Se7en", "director": "David Fincher", "metadata_": {"year": 1995, "genre": ["thriller", "crime"]}},
+    {"title": "Prisoners", "director": "Denis Villeneuve", "metadata_": {"year": 2013, "genre": ["thriller", "crime"]}},
+    {"title": "Gone Girl", "director": "David Fincher", "metadata_": {"year": 2014, "genre": ["thriller", "mystery"]}},
+    {"title": "Whiplash", "director": "Damien Chazelle", "metadata_": {"year": 2014, "genre": ["drama", "music"]}},
+
+    # --- Awe / sci-fi sublime ---
+    {"title": "2001: A Space Odyssey", "director": "Stanley Kubrick", "metadata_": {"year": 1968, "genre": ["science fiction"]}},
+    {"title": "Arrival", "director": "Denis Villeneuve", "metadata_": {"year": 2016, "genre": ["science fiction", "drama"]}},
+    {"title": "Interstellar", "director": "Christopher Nolan", "metadata_": {"year": 2014, "genre": ["science fiction", "adventure"]}},
+    {"title": "Dune", "director": "Denis Villeneuve", "metadata_": {"year": 2021, "genre": ["science fiction", "adventure"]}},
+
+    # --- More novel<->film overlaps ---
+    {"title": "Rebecca", "director": "Alfred Hitchcock", "metadata_": {"year": 1940, "genre": ["thriller", "gothic", "drama"]}},
+    {"title": "The Great Gatsby", "director": "Baz Luhrmann", "metadata_": {"year": 2013, "genre": ["drama", "romance"]}},
+    {"title": "The Book Thief", "director": "Brian Percival", "metadata_": {"year": 2013, "genre": ["war", "drama"]}},
+    {"title": "Never Let Me Go", "director": "Mark Romanek", "metadata_": {"year": 2010, "genre": ["science fiction", "drama"]}},
+]
+
+
 async def seed(run_analysis: bool = False):
     await init_db()
 
     async with async_session() as session:
-        existing = await session.execute(select(Book.title))
-        existing_titles = {row[0] for row in existing.fetchall()}
+        existing = await session.execute(select(MediaItem.medium, MediaItem.title))
+        existing_keys = {(row[0], row[1]) for row in existing.fetchall()}
 
-        for book_data in SEED_BOOKS:
-            if book_data["title"] in existing_titles:
-                logger.info(f"Skipping (exists): {book_data['title']}")
+        # (medium, title, creator, metadata_) — dedup by (medium, title) so a
+        # film adaptation isn't skipped because the namesake book exists.
+        to_seed = [
+            ("book", b["title"], b["author"], b["metadata_"]) for b in SEED_BOOKS
+        ] + [
+            ("film", f["title"], f["director"], f["metadata_"]) for f in SEED_FILMS
+        ]
+
+        for medium, title, creator, meta in to_seed:
+            if (medium, title) in existing_keys:
+                logger.info(f"Skipping (exists): [{medium}] {title}")
                 continue
-
-            book = Book(
-                title=book_data["title"],
-                author=book_data["author"],
-                metadata_=book_data["metadata_"],
+            session.add(MediaItem(
+                medium=medium,
+                title=title,
+                creator=creator,
+                metadata_=meta,
                 analysis_status="pending",
-            )
-            session.add(book)
-            logger.info(f"Added: {book_data['title']}")
+            ))
+            logger.info(f"Added: [{medium}] {title}")
 
         await session.commit()
 
     if run_analysis:
-        logger.info("Running emotional analysis on all pending books...")
+        logger.info("Running emotional analysis on all pending items...")
         async with async_session() as session:
             result = await session.execute(
-                select(Book).where(Book.analysis_status == "pending")
+                select(MediaItem).where(MediaItem.analysis_status == "pending")
             )
-            pending_books = result.scalars().all()
+            pending = result.scalars().all()
 
-            for book in pending_books:
-                logger.info(f"Analyzing: {book.title}...")
+            for item in pending:
+                logger.info(f"Analyzing: {item.title}...")
                 try:
-                    analysis = await analyze_book(book.title, book.author)
-                    book.description = analysis["description"]
-                    book.emotion_breakdown = analysis["emotion_breakdown"]
-                    book.emotion_vector = analysis["emotion_vector"]
-                    book.raw_claude_response = analysis["raw_response"]
-                    book.analysis_status = "completed"
+                    analysis = await analyze_media(item.medium, item.title, item.creator)
+                    item.description = analysis["description"]
+                    item.emotion_breakdown = analysis["emotion_breakdown"]
+                    item.emotion_vector = analysis["emotion_vector"]
+                    item.raw_response = analysis["raw_response"]
+                    if analysis.get("cover_image_url"):
+                        item.cover_image_url = analysis["cover_image_url"]
+                    item.analysis_status = "completed"
                     await session.commit()
-                    logger.info(f"  Done: {book.title}")
+                    logger.info(f"  Done: {item.title}")
                 except Exception as e:
-                    logger.error(f"  Failed: {book.title} -- {e}")
-                    book.analysis_status = "failed"
+                    logger.error(f"  Failed: {item.title} -- {e}")
+                    item.analysis_status = "failed"
                     await session.commit()
+
+                # Small spacing to stay under LLM / scrape rate limits.
+                await asyncio.sleep(1.0)
+
+            # Standardize all vectors against the corpus centroid.
+            await recompute_all_embeddings(session)
 
     logger.info("Seeding complete.")
 

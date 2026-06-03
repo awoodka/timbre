@@ -9,6 +9,7 @@ _env_file = Path(__file__).resolve().parent.parent.parent / ".env"
 class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://mediafingerprint:mediafingerprint@localhost:5432/mediafingerprint"
     gemini_api_key: str = ""
+    tmdb_api_key: str = ""  # The Movie Database — film metadata + posters
     # Enable TLS to Postgres. Off for local Docker; on for managed Postgres
     # (RDS / Supabase / Neon) which require SSL. Driven by the DB_SSL env var.
     db_ssl: bool = False

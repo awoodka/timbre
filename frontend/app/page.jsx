@@ -18,7 +18,7 @@ function BookSearch({ books, onSelect }) {
   const filtered = query.trim().length > 0
     ? books.filter((b) =>
         b.title.toLowerCase().includes(query.toLowerCase()) ||
-        b.author.toLowerCase().includes(query.toLowerCase())
+        b.creator.toLowerCase().includes(query.toLowerCase())
       ).slice(0, 8)
     : []
 
@@ -75,7 +75,7 @@ function BookSearch({ books, onSelect }) {
                   onClick={() => pickBook(b)}
                 >
                   <span className="suggestion-title">{b.title}</span>
-                  <span className="suggestion-author">{b.author}</span>
+                  <span className="suggestion-author">{b.creator}</span>
                 </button>
               ))}
             </div>
@@ -108,15 +108,15 @@ export default function Home() {
   const [confirmingDelete, setConfirmingDelete] = useState(null)
 
   useEffect(() => {
-    api.getBooks()
+    api.getMedia()
       .then((b) => setBooks(b.filter((x) => x.analysis_status === 'completed')))
       .finally(() => setBooksLoading(false))
   }, [])
 
-  const available = books.filter((b) => !ratings.find((r) => r.book_id === b.id))
+  const available = books.filter((b) => !ratings.find((r) => r.media_id === b.id))
 
   const addRating = (bookId, rating) => {
-    setRatings([...ratings, { book_id: bookId, rating }])
+    setRatings([...ratings, { media_id: bookId, rating }])
     setResults(null)
   }
 
@@ -172,14 +172,14 @@ export default function Home() {
           <h2 className="section-title" style={{ marginTop: 0 }}>Your Rated Books</h2>
           <div className="rating-list">
             {ratings.map((r, idx) => {
-              const book = books.find((b) => b.id === r.book_id)
+              const book = books.find((b) => b.id === r.media_id)
               if (!book) return null
               return (
-                <div key={r.book_id} className="rating-row">
+                <div key={r.media_id} className="rating-row">
                   <BookCover url={book.cover_image_url} size="small" />
                   <Link href={`/book/${book.id}`} className="rated-book-info">
                     <span className="rated-title">{book.title}</span>
-                    <span className="rated-author">{book.author}</span>
+                    <span className="rated-author">{book.creator}</span>
                   </Link>
                   <StarRating value={r.rating} onChange={(val) => updateRating(idx, val)} />
                   {confirmingDelete === idx ? (
@@ -219,12 +219,12 @@ export default function Home() {
             <p style={{ color: 'var(--text-muted)' }}>No matches found — try rating more books.</p>
           ) : (
             <div className="similar-list">
-              {results.map(({ book, similarity }) => (
+              {results.map(({ item: book, similarity }) => (
                 <Link key={book.id} href={`/book/${book.id}`} className="similar-item">
                   <BookCover url={book.cover_image_url} size="small" />
                   <div className="info">
                     <h4>{book.title}</h4>
-                    <div className="author">{book.author}</div>
+                    <div className="author">{book.creator}</div>
                     <div className="reason-tags">
                       {getMatchReasons(book).map((r) => {
                         const colors = getEmotionColor(r.key)

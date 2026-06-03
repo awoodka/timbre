@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import init_db
-from app.routers import books, recommend, dimensions
+from app.routers import media, recommend, dimensions
 
 logging.basicConfig(level=logging.INFO)
 
@@ -31,7 +31,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(books.router)
+app.include_router(media.router)
 app.include_router(recommend.router)
 app.include_router(dimensions.router)
 

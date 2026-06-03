@@ -16,7 +16,7 @@ import logging
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.book import Book
+from app.models.media import MediaItem
 from app.services.emotional_analysis import compute_centroid, standardize_vector
 
 logger = logging.getLogger(__name__)
@@ -28,16 +28,18 @@ async def recompute_all_embeddings(session: AsyncSession) -> int:
     Recomputes the centroid from the current corpus, then sets each vector to
     normalize(scores - centroid). Returns the number of books restandardized.
     """
-    books = (
-        await session.execute(select(Book).where(Book.emotion_breakdown.isnot(None)))
+    items = (
+        await session.execute(
+            select(MediaItem).where(MediaItem.emotion_breakdown.isnot(None))
+        )
     ).scalars().all()
-    if not books:
+    if not items:
         return 0
 
-    centroid = compute_centroid([b.emotion_breakdown for b in books])
-    for b in books:
-        b.emotion_vector = standardize_vector(b.emotion_breakdown, centroid)
+    centroid = compute_centroid([m.emotion_breakdown for m in items])
+    for m in items:
+        m.emotion_vector = standardize_vector(m.emotion_breakdown, centroid)
     await session.commit()
 
-    logger.info(f"Re-standardized {len(books)} embeddings against corpus centroid")
-    return len(books)
+    logger.info(f"Re-standardized {len(items)} embeddings against corpus centroid")
+    return len(items)

@@ -4,8 +4,8 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models.book import Book
-from app.schemas import BookResponse, BookSimilarResponse, RecommendRequest
+from app.models.media import MediaItem
+from app.schemas import MediaResponse, MediaSimilarResponse, RecommendRequest
 
 router = APIRouter(prefix="/api", tags=["recommendations"])
 
@@ -43,8 +43,8 @@ def build_preference_vector(
     return preference
 
 
-@router.post("/recommend", response_model=list[BookSimilarResponse])
-async def recommend_books(
+@router.post("/recommend", response_model=list[MediaSimilarResponse])
+async def recommend_media(
     req: RecommendRequest,
     db: AsyncSession = Depends(get_db),
 ):
@@ -56,19 +56,19 @@ async def recommend_books(
     rated_ids = set()
 
     for r in req.ratings:
-        book = await db.get(Book, r.book_id)
-        if not book:
+        item = await db.get(MediaItem, r.media_id)
+        if not item:
             raise HTTPException(
-                status_code=404, detail=f"Book {r.book_id} not found"
+                status_code=404, detail=f"Media item {r.media_id} not found"
             )
-        if book.emotion_vector is None:
+        if item.emotion_vector is None:
             raise HTTPException(
                 status_code=400,
-                detail=f"Book '{book.title}' has not been analyzed yet",
+                detail=f"'{item.title}' has not been analyzed yet",
             )
-        vectors.append(np.array(book.emotion_vector, dtype=np.float64))
+        vectors.append(np.array(item.emotion_vector, dtype=np.float64))
         ratings.append(r.rating)
-        rated_ids.add(str(book.id))
+        rated_ids.add(str(item.id))
 
     preference = build_preference_vector(vectors, ratings)
 
@@ -78,7 +78,7 @@ async def recommend_books(
     query = text(
         f"""
         SELECT id, 1 - (emotion_vector <=> CAST(:vec AS vector)) as similarity
-        FROM books
+        FROM media
         WHERE id NOT IN ({placeholders}) AND emotion_vector IS NOT NULL
         ORDER BY emotion_vector <=> CAST(:vec AS vector)
         LIMIT :lim
@@ -89,10 +89,10 @@ async def recommend_books(
 
     recommendations = []
     for row in rows:
-        book = await db.get(Book, row[0])
+        item = await db.get(MediaItem, row[0])
         recommendations.append(
-            BookSimilarResponse(
-                book=BookResponse.from_orm_book(book),
+            MediaSimilarResponse(
+                item=MediaResponse.from_orm_item(item),
                 similarity=round(float(row[1]), 4),
             )
         )

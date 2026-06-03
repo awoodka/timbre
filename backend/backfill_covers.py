@@ -6,7 +6,7 @@ import logging
 import httpx
 from sqlalchemy import select
 from app.database import init_db, async_session
-from app.models.book import Book
+from app.models.media import MediaItem
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -37,19 +37,23 @@ async def fetch_cover(client: httpx.AsyncClient, title: str, author: str) -> str
 async def main():
     await init_db()
     async with async_session() as s:
-        books = (await s.execute(
-            select(Book).where(Book.cover_image_url.is_(None) | (Book.cover_image_url == ""))
+        # Open Library covers are book-specific, so scope to the book medium.
+        items = (await s.execute(
+            select(MediaItem).where(
+                (MediaItem.medium == "book")
+                & (MediaItem.cover_image_url.is_(None) | (MediaItem.cover_image_url == ""))
+            )
         )).scalars().all()
-        logger.info(f"Found {len(books)} books without covers")
+        logger.info(f"Found {len(items)} books without covers")
 
         async with httpx.AsyncClient(timeout=10) as client:
-            for book in books:
-                url = await fetch_cover(client, book.title, book.author)
+            for item in items:
+                url = await fetch_cover(client, item.title, item.creator)
                 if url:
-                    book.cover_image_url = url
-                    logger.info(f"  Cover: {book.title}")
+                    item.cover_image_url = url
+                    logger.info(f"  Cover: {item.title}")
                 else:
-                    logger.warning(f"  No cover: {book.title}")
+                    logger.warning(f"  No cover: {item.title}")
                 await asyncio.sleep(0.3)
 
         await s.commit()
