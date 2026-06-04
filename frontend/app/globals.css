@@ -299,6 +299,137 @@ body {
   font-weight: 500;
 }
 
+/* Bookshelf landing — minimalist, natural spines, vertically centred */
+.shelf-view {
+  min-height: calc(100vh - 9rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.shelf-view .page-header {
+  text-align: center;
+  margin-bottom: 1.75rem;
+}
+
+.shelf-stage {
+  margin: 0;
+}
+
+.shelf-books {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 340px;
+}
+
+.shelf-book {
+  position: relative;
+  flex: 0 0 auto;
+  width: 84px;
+  border: none;
+  border-radius: 3px 3px 0 0;
+  /* solid colour + a rounded-spine sheen so it reads as a book, not a flat bar */
+  background-color: var(--spine);
+  background-image: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.20) 0%,
+    rgba(255, 255, 255, 0.10) 16%,
+    rgba(255, 255, 255, 0.12) 48%,
+    rgba(0, 0, 0, 0.08) 80%,
+    rgba(0, 0, 0, 0.22) 100%
+  );
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 0 0.9rem;
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.14);
+  transition: transform 0.22s cubic-bezier(.2, .8, .3, 1.1), box-shadow 0.22s, filter 0.22s, opacity 0.22s;
+}
+
+/* subtle spine bands near the head and tail */
+.shelf-book::before,
+.shelf-book::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.16);
+}
+.shelf-book::before { top: 13px; }
+.shelf-book::after { bottom: 30px; }
+
+.shelf-book:hover {
+  transform: translateY(-18px) rotate(-1.5deg);
+  box-shadow: 0 16px 24px rgba(0, 0, 0, 0.22);
+}
+
+/* spotlight: gently fade the other books while one is hovered (opacity only, no colour shift) */
+.shelf-books:hover .shelf-book:not(:hover) {
+  opacity: 0.55;
+}
+
+.shelf-book-title {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1.05rem;
+  letter-spacing: 0.06em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.shelf-book-count {
+  font-size: 0.72rem;
+  font-weight: 500;
+  opacity: 0.7;
+}
+
+.shelf-board {
+  height: 14px;
+  border-radius: 2px;
+  background: #cdbfb2;
+  box-shadow: 0 9px 16px rgba(0, 0, 0, 0.10);
+  width: 100%;
+}
+
+/* Grid head (after a shelf is chosen) */
+.catalogue-gridhead {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.shelf-back {
+  background: var(--surface);
+  color: var(--text);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.shelf-back:hover { background: var(--surface-hover); border-color: var(--accent); color: var(--accent); }
+
+.gridhead-count {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-left: auto;
+}
+
 /* Detail page */
 .book-detail {
   max-width: 900px;
