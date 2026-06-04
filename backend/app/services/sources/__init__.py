@@ -11,8 +11,11 @@ is shared and only adapts its search wording per medium. To add a medium: write 
 
 import asyncio
 
+from app.services.sources import anime_manga as _am
 from app.services.sources import book as _book
 from app.services.sources import film as _film
+from app.services.sources import game as _game
+from app.services.sources import show as _show
 from app.services.sources import web as _web
 
 # Human-readable noun per medium, used in prompts and search queries.
@@ -30,6 +33,10 @@ MEDIUM_NOUNS = {
 _METADATA_FETCHERS = {
     "book": _book.fetch_metadata,
     "film": _film.fetch_metadata,
+    "show": _show.fetch_metadata,
+    "anime": _am.fetch_anime,
+    "manga": _am.fetch_manga,
+    "game": _game.fetch_metadata,
 }
 
 

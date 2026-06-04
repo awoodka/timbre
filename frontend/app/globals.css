@@ -158,6 +158,147 @@ body {
   font-weight: 500;
 }
 
+/* Catalogue filters */
+.catalogue-filters {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.filter-pill {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1;
+}
+
+.filter-pill:hover {
+  background: var(--surface-hover);
+}
+
+.filter-count {
+  opacity: 0.65;
+  font-size: 0.78rem;
+  margin-left: 0.2rem;
+}
+
+/* Media-type encoding on cards */
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.media-badge {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  padding: 0.1rem 0.4rem;
+  border: 1px solid;
+  border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+}
+
+/* Catalogue controls (search / sort / mood) */
+.catalogue-controls {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.catalogue-search {
+  flex: 1;
+  min-width: 220px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.catalogue-search:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.control {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.control-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.sort-select {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.85rem;
+  color: var(--text);
+  cursor: pointer;
+  text-transform: capitalize;
+}
+
+.mood-chip {
+  background: var(--accent-light);
+  border: 1.5px solid var(--accent);
+  color: var(--accent-hover);
+  border-radius: 20px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-transform: capitalize;
+}
+
+.emotion-dot.clickable {
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.emotion-dot.clickable:hover {
+  filter: brightness(0.95);
+}
+
+.emotion-dot.selected {
+  border-color: currentColor;
+  font-weight: 700;
+}
+
+.card-meta {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  margin-bottom: 0.15rem;
+}
+
+.card-feels {
+  margin-top: 0.5rem;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.card-feels span {
+  color: var(--accent-hover);
+  font-weight: 500;
+}
+
 /* Detail page */
 .book-detail {
   max-width: 900px;

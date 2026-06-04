@@ -10,8 +10,12 @@ const nextConfig = {
       // ...newly analyzed books get covers from the Google Books API.
       { protocol: 'https', hostname: 'books.google.com' },
       { protocol: 'https', hostname: 'books.googleusercontent.com' },
-      // Film posters from TMDB.
+      // Film/TV posters from TMDB.
       { protocol: 'https', hostname: 'image.tmdb.org' },
+      // Anime/manga covers from MyAnimeList (Jikan).
+      { protocol: 'https', hostname: 'cdn.myanimelist.net' },
+      // Video game covers from RAWG.
+      { protocol: 'https', hostname: 'media.rawg.io' },
     ],
   },
   async rewrites() {

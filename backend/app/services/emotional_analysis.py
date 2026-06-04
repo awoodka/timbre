@@ -54,13 +54,25 @@ async def generate_emotional_profile(
     context_block = _build_context_block(context)
     # For audio-visual media, the craft itself carries emotion — fold it into the
     # felt scoring (Decision §6: aesthetics feed the shared dims, not new ones).
-    craft_hint = (
-        "\nThis medium's craft shapes the feeling: account for how cinematography, "
-        "color, lighting, music/score, sound, editing rhythm, and performance "
-        "contribute to the emotional experience.\n"
-        if medium in {"film", "show", "anime", "game"}
-        else ""
-    )
+    if medium in {"film", "show", "anime"}:
+        craft_hint = (
+            "\nThis medium's craft shapes the feeling: account for how cinematography, "
+            "color, lighting, music/score, sound, editing rhythm, and performance "
+            "contribute to the emotional experience.\n"
+        )
+    elif medium == "game":
+        craft_hint = (
+            "\nThis medium's craft shapes the feeling: account for gameplay and player "
+            "agency/control, challenge and mastery, immersion/presence, interactivity, "
+            "and the music, art, and sound.\n"
+        )
+    elif medium == "manga":
+        craft_hint = (
+            "\nThis medium's craft shapes the feeling: account for the art style, "
+            "linework, paneling and page rhythm, and use of black and negative space.\n"
+        )
+    else:
+        craft_hint = ""
 
     response = await client.aio.models.generate_content(
         model=MODEL,

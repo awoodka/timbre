@@ -25,7 +25,7 @@ export default function RootLayout({ children }) {
               <Link href="/" className="nav-logo">Timbre</Link>
               <div className="nav-links">
                 <Link href="/">Home</Link>
-                <Link href="/library">Library</Link>
+                <Link href="/catalogue">Catalogue</Link>
               </div>
             </nav>
             <main className="main-content">{children}</main>

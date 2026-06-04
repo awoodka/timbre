@@ -156,7 +156,243 @@ FILM_EXPECTED_ABSENT = [
 ]
 
 
-# --- similarity helpers (operate on a `corpus` fixture — books OR films) -----
+# ===========================================================================
+# TV SHOW ground truth (sourced; mirrors the book/film ground truth above)
+# ===========================================================================
+# Sourcing (retrieved 2026-06): collider.com (greatest TV dramas, sci-fi-horror
+# shows), netflix/marieclaire (comfort TV). Series-level emotional signature;
+# endings are fuzzier for series, so SHOW_ARC_* keeps to clearly-agreed cases.
+SHOW_CLUSTERS = {
+    "devastation": [
+        "The Leftovers", "Band of Brothers", "Chernobyl", "Six Feet Under",
+        "When They See Us",
+    ],  # This Is Us excluded — a warm tearjerker, not bleak devastation
+    "cozy_uplifting": [
+        "Ted Lasso", "Schitt's Creek", "Gilmore Girls", "The Good Place",
+        "Parks and Recreation", "Bluey", "Heartstopper", "Friday Night Lights",
+    ],
+    "horror_dread": [
+        "Hannibal", "The Haunting of Hill House", "Midnight Mass",
+        "Stranger Things", "The X-Files", "Twin Peaks",
+    ],
+    "melancholy_longing": [
+        "Normal People", "Fleabag", "BoJack Horseman", "After Life",
+        "Mad Men", "Atlanta",
+    ],
+    "tension_thriller": [
+        "Breaking Bad", "The Sopranos", "The Wire", "Better Call Saul",
+        "Fargo", "Mindhunter", "True Detective",
+    ],
+    "awe_scifi": [
+        "The Expanse", "Battlestar Galactica", "Star Trek: The Next Generation",
+        "For All Mankind",
+    ],
+}
+
+SHOW_ARC_TRAGIC = [
+    "Chernobyl", "Mr. Robot", "The Handmaid's Tale", "Dexter", "The Sopranos",
+]
+SHOW_ARC_UPLIFTING = [
+    "Ted Lasso", "Schitt's Creek", "The Good Place", "Parks and Recreation",
+    "Bluey",
+]  # Friday Night Lights excluded — its finale is warmly bittersweet, not unambiguously uplifting
+
+SHOW_EXPECTED_DOMINANT = [
+    ("Breaking Bad", "tension", 5),
+    ("The Leftovers", "grief", 3),
+    ("Chernobyl", "dread", 4),
+    ("Ted Lasso", "warmth", 4),
+    ("Schitt's Creek", "warmth", 5),
+    ("Hannibal", "dread", 4),
+    ("The Haunting of Hill House", "grief", 5),
+    ("BoJack Horseman", "melancholy", 4),
+    ("Fleabag", "melancholy", 5),
+    ("The Sopranos", "tension", 5),
+    ("Mad Men", "melancholy", 5),
+    ("Twin Peaks", "dread", 5),
+    ("The Good Place", "warmth", 6),
+]
+SHOW_EXPECTED_ABSENT = [
+    ("Ted Lasso", "dread", 6),
+    ("Schitt's Creek", "dread", 6),
+    ("Bluey", "dread", 6),
+]
+
+
+# ===========================================================================
+# ANIME ground truth (sourced; mirrors the prior media)
+# ===========================================================================
+# Sourcing (2026-06): cbr/earlygame (saddest/devastating anime), animehunch/cbr
+# (dark psychological), collider/ranker/cbr (wholesome comfort anime).
+ANIME_CLUSTERS = {
+    "devastation": [
+        "Clannad: After Story", "Your Lie in April", "Anohana", "Plastic Memories",
+        "Made in Abyss", "Banana Fish", "86 Eighty-Six", "Wonder Egg Priority",
+    ],
+    "dark_psychological": [
+        "Monster", "Death Note", "Tokyo Ghoul", "Neon Genesis Evangelion",
+        "Psycho-Pass", "Higurashi When They Cry", "Paranoia Agent", "Berserk",
+        "Attack on Titan", "Chainsaw Man", "Erased",
+    ],
+    "melancholy_contemplative": [
+        "March Comes in Like a Lion", "Violet Evergarden", "Mushishi",
+        "Cowboy Bebop", "Haibane Renmei", "Aria the Animation", "Vinland Saga",
+    ],
+    "cozy_wholesome": [
+        "Spy x Family", "Barakamon", "Laid-Back Camp", "K-On!", "Fruits Basket",
+        "Natsume's Book of Friends", "My Love Story!!", "Sweetness and Lightning",
+    ],
+    "adventure_triumph": [
+        "Fullmetal Alchemist: Brotherhood", "Hunter x Hunter", "One Piece",
+        "Mob Psycho 100", "Gurren Lagann", "My Hero Academia", "Demon Slayer",
+        "Jujutsu Kaisen", "Code Geass",
+    ],
+    "comedy": [
+        "Gintama", "One Punch Man", "Nichijou", "Konosuba",
+        "The Disastrous Life of Saiki K.",
+    ],
+}
+ANIME_ARC_TRAGIC = [
+    "Your Lie in April", "Plastic Memories", "Banana Fish",
+    "Neon Genesis Evangelion", "Berserk",
+]
+ANIME_ARC_UPLIFTING = [
+    "Fullmetal Alchemist: Brotherhood", "My Hero Academia", "Gurren Lagann",
+    "Mob Psycho 100", "K-On!", "Barakamon",
+]
+ANIME_EXPECTED_DOMINANT = [
+    ("Your Lie in April", "melancholy", 4),
+    ("Clannad: After Story", "grief", 4),
+    ("Monster", "tension", 5),
+    ("Death Note", "tension", 5),
+    ("Berserk", "dread", 4),
+    ("K-On!", "joy", 5),
+    ("Spy x Family", "warmth", 5),
+    ("Cowboy Bebop", "melancholy", 5),
+    ("Neon Genesis Evangelion", "dread", 5),
+    ("Gurren Lagann", "empowerment", 5),
+]
+ANIME_EXPECTED_ABSENT = [
+    ("K-On!", "dread", 6),
+    ("Barakamon", "dread", 6),
+    ("Spy x Family", "grief", 6),
+]
+
+# ===========================================================================
+# MANGA ground truth (sourced; mirrors the prior media)
+# ===========================================================================
+# Sourcing (2026-06): animesenpai/gamerant/collider (dark/horror manga),
+# cbr top psychological manga, plus general consensus. Manga endings are fuzzy
+# (long-running) → ARC sets kept to clearly-resolved works.
+MANGA_CLUSTERS = {
+    "devastation": [
+        "Goodnight Punpun", "A Silent Voice", "Vinland Saga", "Attack on Titan",
+        "Berserk", "Vagabond", "Solanin",
+    ],
+    "dark_psychological": [
+        "Monster", "Death Note", "Tokyo Ghoul", "Homunculus", "The Flowers of Evil",
+        "20th Century Boys", "Inuyashiki", "Chainsaw Man", "Parasyte", "I Am a Hero",
+    ],
+    "horror": [
+        "Uzumaki", "Tomie", "The Drifting Classroom", "Gyo", "Dorohedoro",
+    ],
+    "melancholy_literary": [
+        "Blue Period", "Mushishi", "A Drifting Life", "A Distant Neighborhood", "Nana",
+    ],
+    "cozy_wholesome": [
+        "Spy x Family", "Komi Can't Communicate", "Barakamon", "Fruits Basket",
+        "Sweetness and Lightning", "Yotsuba&!", "Witch Hat Atelier",
+    ],
+    "adventure_triumph": [
+        "One Piece", "Fullmetal Alchemist", "Hunter x Hunter", "Demon Slayer",
+        "Jujutsu Kaisen", "Slam Dunk", "Pluto", "Naruto",
+    ],
+}
+MANGA_ARC_TRAGIC = [
+    "Goodnight Punpun", "Berserk", "Homunculus",
+]  # The Flowers of Evil excluded — its manga ending is bittersweet/hopeful, not bleak
+MANGA_ARC_UPLIFTING = [
+    "Fullmetal Alchemist", "Slam Dunk", "Witch Hat Atelier",
+]
+MANGA_EXPECTED_DOMINANT = [
+    ("Goodnight Punpun", "melancholy", 5),
+    ("Berserk", "dread", 4),
+    ("Uzumaki", "dread", 3),
+    ("Monster", "tension", 5),
+    ("A Silent Voice", "grief", 5),
+    ("Yotsuba&!", "warmth", 5),
+    ("Tomie", "dread", 3),
+    ("Vinland Saga", "grief", 6),
+]
+MANGA_EXPECTED_ABSENT = [
+    ("Yotsuba&!", "dread", 6),
+    ("Komi Can't Communicate", "dread", 6),
+]
+
+
+# ===========================================================================
+# VIDEO GAME ground truth (sourced; mirrors the prior media)
+# ===========================================================================
+# Sourcing (2026-06): gaming.net/ranker/comicbook (emotional games), thegamer/
+# gamerant (atmospheric-horror games), eneba/gamespot/cnn (cozy games).
+GAME_CLUSTERS = {
+    "devastation": [
+        "The Last of Us", "Red Dead Redemption 2", "To the Moon",
+        "What Remains of Edith Finch", "That Dragon, Cancer",
+        "Brothers: A Tale of Two Sons", "Spec Ops: The Line", "Final Fantasy VII",
+    ],
+    "horror_dread": [
+        "Silent Hill 2", "Resident Evil 2", "Bloodborne", "Dead Space",
+        "Amnesia: The Dark Descent", "SOMA", "Alien: Isolation", "Outlast",
+    ],
+    "melancholy_contemplative": [
+        "Disco Elysium", "Hollow Knight", "Gris", "Firewatch",
+        "Kentucky Route Zero", "NieR: Automata", "Night in the Woods",
+    ],
+    "cozy_wholesome": [
+        "Stardew Valley", "Animal Crossing: New Horizons", "Spiritfarer",
+        "A Short Hike", "Untitled Goose Game", "Slime Rancher", "Unpacking",
+    ],
+    "wonder_adventure": [
+        "Outer Wilds", "Journey", "The Legend of Zelda: Breath of the Wild",
+        "Subnautica", "Portal", "Abzu", "No Man's Sky",
+    ],
+    "triumph": [
+        "Celeste", "Hades", "God of War", "Doom Eternal",
+        "Ori and the Blind Forest", "Sekiro: Shadows Die Twice",
+    ],
+    "dark_oppressive": [
+        "Dark Souls", "Elden Ring", "Inside", "Limbo",
+    ],
+}
+GAME_ARC_TRAGIC = [
+    "Red Dead Redemption 2", "Spec Ops: The Line", "The Last of Us",
+    "Brothers: A Tale of Two Sons",
+]
+GAME_ARC_UPLIFTING = [
+    "Celeste", "Ori and the Blind Forest", "A Short Hike", "Hades",
+]
+GAME_EXPECTED_DOMINANT = [
+    ("The Last of Us", "grief", 5),
+    ("Red Dead Redemption 2", "melancholy", 5),
+    ("Silent Hill 2", "dread", 3),
+    ("Amnesia: The Dark Descent", "dread", 3),
+    ("Stardew Valley", "warmth", 5),
+    ("Disco Elysium", "melancholy", 5),
+    ("Outer Wilds", "wonder", 4),
+    ("Journey", "wonder", 4),
+    ("Hades", "empowerment", 5),
+    ("Spiritfarer", "grief", 5),
+    ("Hollow Knight", "melancholy", 5),
+]
+GAME_EXPECTED_ABSENT = [
+    ("Stardew Valley", "dread", 6),
+    ("Animal Crossing: New Horizons", "dread", 6),
+    ("A Short Hike", "dread", 6),
+]
+
+
+# --- similarity helpers (operate on a `corpus` fixture — any medium) ---------
 def cosine(a: np.ndarray, b: np.ndarray) -> float:
     na, nb = float(np.linalg.norm(a)), float(np.linalg.norm(b))
     return float(np.dot(a, b) / (na * nb)) if na and nb else 0.0

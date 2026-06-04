@@ -74,6 +74,46 @@ def film_corpus(_all_media) -> dict:
 
 
 @pytest.fixture(scope="session")
+def show_corpus(_all_media) -> dict:
+    """TV shows only, keyed by title — mirror of `corpus` for the show suite."""
+    return {
+        m["title"]: {"vec": m["vec"], "scores": m["scores"]}
+        for m in _all_media
+        if m["medium"] == "show"
+    }
+
+
+@pytest.fixture(scope="session")
+def anime_corpus(_all_media) -> dict:
+    """Anime only, keyed by title."""
+    return {
+        m["title"]: {"vec": m["vec"], "scores": m["scores"]}
+        for m in _all_media
+        if m["medium"] == "anime"
+    }
+
+
+@pytest.fixture(scope="session")
+def manga_corpus(_all_media) -> dict:
+    """Manga only, keyed by title."""
+    return {
+        m["title"]: {"vec": m["vec"], "scores": m["scores"]}
+        for m in _all_media
+        if m["medium"] == "manga"
+    }
+
+
+@pytest.fixture(scope="session")
+def game_corpus(_all_media) -> dict:
+    """Video games only, keyed by title."""
+    return {
+        m["title"]: {"vec": m["vec"], "scores": m["scores"]}
+        for m in _all_media
+        if m["medium"] == "game"
+    }
+
+
+@pytest.fixture(scope="session")
 def media_corpus(_all_media) -> dict:
     """All media, keyed by (medium, title) — for cross-media tests."""
     return {
