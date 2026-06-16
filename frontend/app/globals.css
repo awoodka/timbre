@@ -1238,3 +1238,75 @@ button:disabled {
 @media (max-width: 480px) {
   .mood-results { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ============================================================
+   Explore (/explore) — 3D projection
+   ============================================================ */
+.explore-controls {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.seg {
+  display: inline-flex;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.seg-btn {
+  padding: 0.45rem 0.9rem;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  border-radius: 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.seg-btn.on {
+  background: var(--accent);
+  color: #fff;
+}
+
+.seg-btn:not(.on):hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.explore-plot {
+  height: 70vh;
+  min-height: 460px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.explore-hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: -0.25rem 0 0.85rem;
+  max-width: 760px;
+  line-height: 1.5;
+}
+
+.explore-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.explore-toggle input {
+  accent-color: var(--accent);
+  cursor: pointer;
+}

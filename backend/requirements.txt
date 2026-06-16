@@ -13,3 +13,4 @@ alembic==1.14.0
 httpx==0.28.1
 beautifulsoup4==4.12.3
 ddgs==9.0.0
+umap-learn==0.5.12

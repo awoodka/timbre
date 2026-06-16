@@ -4,8 +4,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 
-// Auth-aware top nav. Logged-out visitors only get Home + Catalogue (+ Sign in);
-// signed-in users get the Discover tool, Catalogue, and their account menu.
+// Auth-aware top nav. Home, Catalogue, and Explore are public; the Discover tool
+// and account menu are for signed-in users.
 export default function NavLinks() {
   const { user, loading, logout } = useAuth()
   const router = useRouter()
@@ -22,6 +22,7 @@ export default function NavLinks() {
       <div className="nav-links">
         <Link href="/">Home</Link>
         <Link href="/catalogue">Catalogue</Link>
+        <Link href="/explore">Explore</Link>
       </div>
     )
   }
@@ -31,6 +32,7 @@ export default function NavLinks() {
       <div className="nav-links">
         <Link href="/">Home</Link>
         <Link href="/catalogue">Catalogue</Link>
+        <Link href="/explore">Explore</Link>
         <Link href="/login" className="nav-signin">Sign in</Link>
       </div>
     )
@@ -40,6 +42,7 @@ export default function NavLinks() {
     <div className="nav-links">
       <Link href="/discover">Discover</Link>
       <Link href="/catalogue">Catalogue</Link>
+      <Link href="/explore">Explore</Link>
       <div className="nav-user">
         <Link href="/account" className="nav-user-name">{user.display_name || user.username}</Link>
         <button className="nav-logout" onClick={doLogout}>Log out</button>

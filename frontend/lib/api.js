@@ -22,6 +22,7 @@ export const api = {
   recommend: (ratings, limit = 10) =>
     request('/recommend', { method: 'POST', body: JSON.stringify({ ratings, limit }) }),
   getDimensions: () => request('/dimensions'),
+  getProjection: (method = 'umap') => request(`/projection?method=${method}`),
 
   // ---- auth ----
   me: () => request('/auth/me'),
