@@ -1044,10 +1044,6 @@ button:disabled {
   animation: band-scroll 75s linear infinite;
 }
 
-.hero-band:hover .band-track {
-  animation-play-state: paused;
-}
-
 .band-cover {
   width: 108px;
   height: 162px;

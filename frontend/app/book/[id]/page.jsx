@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 import EmotionRadar from '@/components/EmotionRadar'
@@ -9,6 +9,7 @@ import EmotionBar from '@/components/EmotionBar'
 
 export default function BookDetail() {
   const { id } = useParams()
+  const router = useRouter()
   const [book, setBook] = useState(null)
   const [similar, setSimilar] = useState([])
   const [loading, setLoading] = useState(true)
@@ -30,9 +31,13 @@ export default function BookDetail() {
 
   return (
     <div className="book-detail">
-      <Link href="/" style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textDecoration: 'none' }}>
+      <button
+        type="button"
+        onClick={() => (window.history.length > 1 ? router.back() : router.push('/catalogue'))}
+        style={{ background: 'none', border: 'none', padding: 0, color: 'var(--text-muted)', fontSize: '0.85rem', cursor: 'pointer' }}
+      >
         &larr; Back
-      </Link>
+      </button>
 
       <h1 style={{ marginTop: '1rem' }}>{book.title}</h1>
       <div className="author">{book.creator}</div>
