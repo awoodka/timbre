@@ -1,6 +1,8 @@
 import { Inter } from 'next/font/google'
 import Link from 'next/link'
+import { AuthProvider } from '@/lib/auth-context'
 import { RatingsProvider } from '@/lib/ratings-context'
+import NavLinks from '@/components/NavLinks'
 import './globals.css'
 
 const inter = Inter({
@@ -19,18 +21,17 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={inter.variable}>
       <body>
-        <RatingsProvider>
-          <div className="app">
-            <nav className="navbar">
-              <Link href="/" className="nav-logo">Timbre</Link>
-              <div className="nav-links">
-                <Link href="/">Home</Link>
-                <Link href="/catalogue">Catalogue</Link>
-              </div>
-            </nav>
-            <main className="main-content">{children}</main>
-          </div>
-        </RatingsProvider>
+        <AuthProvider>
+          <RatingsProvider>
+            <div className="app">
+              <nav className="navbar">
+                <Link href="/" className="nav-logo">Timbre</Link>
+                <NavLinks />
+              </nav>
+              <main className="main-content">{children}</main>
+            </div>
+          </RatingsProvider>
+        </AuthProvider>
       </body>
     </html>
   )

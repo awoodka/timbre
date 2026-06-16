@@ -5,7 +5,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import init_db
-from app.routers import media, recommend, dimensions
+import app.models.user  # noqa: F401  -- register User/Rating tables with Base.metadata
+from app.routers import media, recommend, dimensions, auth, ratings
 
 logging.basicConfig(level=logging.INFO)
 
@@ -34,6 +35,8 @@ app.add_middleware(
 app.include_router(media.router)
 app.include_router(recommend.router)
 app.include_router(dimensions.router)
+app.include_router(auth.router)
+app.include_router(ratings.router)
 
 
 @app.get("/api/health")

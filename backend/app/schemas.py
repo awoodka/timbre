@@ -66,3 +66,44 @@ class DimensionResponse(BaseModel):
     key: str
     name: str
     description: str
+
+
+# ---- Auth / users ----
+
+class UserCreate(BaseModel):
+    username: str = Field(min_length=3, max_length=50)
+    password: str = Field(min_length=6, max_length=200)
+    display_name: str | None = Field(default=None, max_length=100)
+
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+
+class UserResponse(BaseModel):
+    id: UUID
+    username: str
+    display_name: str | None
+    settings: dict
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class UserUpdate(BaseModel):
+    display_name: str | None = Field(default=None, max_length=100)
+    settings: dict | None = None
+
+
+# ---- Per-user ratings ----
+
+class RatingUpsert(BaseModel):
+    rating: float = Field(ge=1, le=5)
+
+
+class RatingResponse(BaseModel):
+    media_id: UUID
+    rating: float
+
+    model_config = {"from_attributes": True}

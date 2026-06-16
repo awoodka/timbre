@@ -19,7 +19,11 @@
 
 ---
 
-## 📍 Where I left off  *(last updated: 2026-06-02)*
+## 📍 Where I left off  *(last updated: 2026-06-16)*
+
+**Most recent (2026-06-16):** Two things this session — (1) a **professional landing page** at `/` (hero + one-line tagline + a **full-bleed scrolling cover band** randomized across all 6 media + "How it works" + a **mood explorer**), with the rate→recommend tool moved to **`/discover`**; (2) **auth gating decided** (supersedes the §7 deferral) — rating + recommendations now **require an account**; logged-out users get only Home + Catalogue + browsing; login/signup → `/discover`; signed-in users can still open the home page via the logo (no forced redirect). Also re-verified per-account rating persistence end-to-end (9/9). See Decision §8. All **uncommitted on `main`.**
+
+**Most recent (2026-06-04):** (1) **Catalogue "bookshelf" landing** — `/catalogue` opens on a full-width shelf of 7 minimalist book-spines (All + 6 media; All = dark grey, others media-coloured) with a subtle sheen + head/tail bands, hover-lift with **no colour change**, centred vertically on a thicker shelf bar; clicking a spine opens the existing card grid (with a "← Shelf" back button), and the All grid has a **multi-select media-type filter**. (2) **User accounts** — username+password auth (bcrypt), JWT in an **httpOnly cookie** that round-trips through the Next `/api` proxy; per-user **ratings persist to Postgres** when signed in; flexible `settings` JSON + editable display name; `/login` + `/account` pages + nav user menu. **Gating deferred** (logged-out users still browse + rate in-memory). See Decision §7. All verified end-to-end; **uncommitted on `main`.**
 
 **Immediate next step:** books + films + shows + anime + manga + **games** all DONE (§4c–§4f) — corpus is **300 items (50 per medium, 6 media)** in one shared space, cross-media validated across all of them. **Only music remains** on the roadmap (the mood-only frontier). Strongly recommended now: (a) the deferred **cross-media tuning pass** (Concerns §3) — the corpus is large and the recurring patterns are clear (sparsity everywhere; bittersweet endings under-read as ~0.5 in anime+games; games' felt-experience vs narrative-theme gap; dimension conflations); (b) the **dual-vector aesthetic** work; (c) finish breadth with **music**. Quality is now the higher-leverage direction.
 
@@ -111,6 +115,23 @@
 - **Decision:** all media embed into ONE shared, medium-agnostic vector (the current felt/structural dims, possibly + universal felt emotions like disgust/beauty/flow). Medium-specific aesthetic channels (color, score, panel layout, agency, tempo…) are NOT dimensions — they are INPUTS the LLM uses when scoring the shared felt dims (a cold, drone-scored film simply scores higher `dread`).
 - **Why:** cross-media recommendation ("this game feels like Norwegian Wood") is the killer feature and needs every medium in one space. **Rejected alternative — zero-pad medium-specific dims (N/A → 0):** under cosine + standardization it makes *medium* the dominant signal and collapses cross-media similarity. The padded blocks act like a one-hot medium tag (a book can never match a film's color dims, so cross-media cosine is strictly deflated by `|shared|/|total|`); and mean-centering turns each medium's zero-block into a shared per-medium offset that clusters items by medium. It also re-introduces the 0≠absent bug for bipolar aesthetic axes (0 = "maximally cool", not "N/A"). Don't revisit zero-padding.
 - **Status:** adopting for film (first medium). Aesthetic richness is preserved via the LLM scoring inputs now, and a future dual-vector later (see Ideas).
+
+---
+
+### 7. User accounts + per-user ratings (local Postgres)  *(2026-06-04)*
+- **Decision:** add simple accounts. **Login = username + password** (no email); passwords **bcrypt**-hashed; session = a signed **JWT in an httpOnly cookie** (stateless — no server-side session table). Profile = a `display_name` + a free-form **`settings` JSON** blob (extensible without migration). New tables `users` + `ratings` (one row per `(user, media)`, unique-constrained, FK→users/media with ON DELETE CASCADE); auto-created by `Base.metadata.create_all` (no migration step). New deps: `bcrypt`, `pyjwt`; new config `SECRET_KEY` (+ `.env.example`).
+- **Why httpOnly cookie over a localStorage token:** Alex chose the more secure option, and it's clean here because the browser reaches FastAPI through the **Next.js `/api` proxy (same-origin)** — Set-Cookie propagates to the browser and the Cookie returns through the proxy, no cross-origin/SameSite friction (verified via :3000). Cookie attrs: `HttpOnly; SameSite=Lax; Max-Age=30d; Path=/; Secure=false` (set Secure behind https in prod).
+- **Ratings flow:** `RatingsProvider` is now auth-aware — on login it loads ratings from `GET /api/ratings`; `rate()`/`removeRating()` optimistically update local state and persist via `PUT/DELETE /api/ratings/{media_id}` when signed in. `/api/recommend` unchanged (still takes the ratings list). Backend: `app/auth.py` (hash/verify, JWT, `get_current_user`/`get_optional_user` cookie deps), `routers/auth.py` (signup/login/logout/me/PATCH me), `routers/ratings.py`.
+- **Gating DEFERRED (Alex's call):** nothing is locked behind login yet. Logged-out users browse and rate **in-memory** (as before); signing in persists. The "what requires an account" policy is a later decision.
+- **Status:** ✅ Built + verified end-to-end (signup/login/me/logout; duplicate→409; bad password→401; unauth ratings→401; per-user persistence; cookie through the proxy). Uncommitted.
+
+---
+
+### 8. Homepage redesign + auth gating decided  *(2026-06-16)*
+- **Landing page:** `/` became a real landing page — hero + one-line tagline, a **full-bleed scrolling cover band** (randomized across all 6 media each load; covers-only pool of 296, breaks the `.main-content` margin via a `100vw`/negative-margin `.full-bleed`), a 3-step **How it works**, and a **mood explorer** (clickable feelings → live matching covers, `>=0.5` on the dimension). The rate→recommend tool moved verbatim to **`/discover`** (`git mv`).
+- **Gating (supersedes the §7 deferral):** rating + recommendations now **require an account**. Logged-out users get **only** Home + Catalogue + browsing — item detail pages (`/book/[id]`) are view-only, so they stay public. Guard = a client-side `RequireAuth` (auth is a client-resolved httpOnly cookie, so no server guard) wrapping `/discover` + `/account`; unauthenticated visitors are sent to **`/`** (the public home, which carries the sign-up CTAs). `RequireAuth` and both logout handlers all target `/`, so there's no redirect race.
+- **Convenience:** login/signup → `/discover` (a fresh sign-in "lands on the tool"). The home page stays **public and viewable for signed-in users** — the top-left logo returns them there (no forced `/`→`/discover` redirect); the hero + closing CTAs are **auth-aware** (→ `/discover` when signed in, → sign-up when not). Nav is auth-aware (`NavLinks` replaced `NavAuth` — logged-out: Home/Catalogue/Sign in; signed-in: Discover/Catalogue/account/Log out).
+- **Status:** ✅ Built + verified (all routes 200 / compile clean; gated pages render only the guard — no tool content in SSR; IDE diagnostics clean across changed files). Client-side redirects still to be eyeballed in-browser. Uncommitted.
 
 ---
 
@@ -225,6 +246,22 @@ Decision §6 starts with the shared felt core only (aesthetics feed the LLM scor
 - Booted the full stack locally and verified end-to-end (DB healthy, backend 50 analyzed books, frontend serving + proxying). Had to re-run `npm install` (incomplete `node_modules`, missing `next` binary).
 - Created this DEVLOG.
 - **Ran the recommendation/vector tests** (`tests/test_recommendations.py`): 20 pass / 15 fail. Fixed the test's hard-coded SSL to use env-driven `DB_SSL` (so it runs against local Postgres); installed `pytest`/`pytest-asyncio` into the venv. **Finding:** vectors are individually accurate and behaviorally sound, but a few inflated dimensions (esp. `emotional_complexity`, mean 0.80 / stdev 0.12) compress the space and hurt precise-neighbor ranking → Concerns §2. Next session candidate: mean-center dimensions before building vectors.
+
+### 2026-06-04
+- **Goal:** frontend polish (catalogue) + add user accounts.
+- **Did (catalogue):** redesigned `/catalogue` into a two-stage "bookshelf" — a full-width shelf of 7 minimalist book-spines (All + 6 media) that open the existing filtered card grid; iterated the spine look with Alex (subtle sheen + head/tail bands; hover-lift with **no colour change**; vertically centred; thicker shelf; All = dark grey); added a multi-select media-type filter to the All grid; fixed the unreadable "← Shelf" button (the global `button` rule forced white text on a light surface).
+- **Did (accounts):** username+password auth (bcrypt), JWT httpOnly cookie via the Next proxy, `users`+`ratings` tables, auth + ratings routers, auth-aware `RatingsProvider`, `/login` + `/account` pages, nav user menu. Verified end-to-end through both `:8000` and the `:3000` proxy.
+- **Decided:** Decision §7 (accounts). Gating deferred per Alex.
+- **Concerns / open questions:** none new. Pre-deploy: set a real `SECRET_KEY`, mark cookies `Secure` under https, and decide gating.
+- **Left off at:** all this session's work is uncommitted on `main`; the tuning pass + music remain the substantive next steps (unchanged).
+
+### 2026-06-16
+- **Goal:** confirm ratings persist per-account; build a more complete, professional homepage; then lock rating/recs behind accounts.
+- **Did (verify):** confirmed per-account rating persistence end-to-end through the Next `/api` proxy — signup→rate→**fresh login still sees them**; edit/delete persist; logged-out → 401. 9/9 checks; cleaned up the throwaway user.
+- **Did (homepage):** rebuilt `/` as a landing page (hero + tagline + full-bleed randomized cover band + How it works + mood explorer); moved the rate→recommend tool to `/discover`. Data shows 296/300 items have covers (even across all 6 media) and every mood chip maps to real matches.
+- **Did (gating):** added `RequireAuth`; gated `/discover` + `/account`; auth-aware nav (`NavLinks`, replacing `NavAuth`); login/signup → `/discover`; the logo keeps the home page reachable for signed-in users (no forced redirect); auth-aware landing CTAs. See Decision §8.
+- **Decided:** Decision §8 (homepage + the long-deferred gating policy).
+- **Left off at:** all uncommitted on `main`. Substantive next steps unchanged (cross-media tuning pass; music). Pre-deploy reminders still stand (real `SECRET_KEY`, `Secure` cookies, `npm audit`).
 
 <!--
 Template for future entries:

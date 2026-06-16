@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     # Enable TLS to Postgres. Off for local Docker; on for managed Postgres
     # (RDS / Supabase / Neon) which require SSL. Driven by the DB_SSL env var.
     db_ssl: bool = False
+    # Auth: secret for signing JWT session cookies (override in prod via SECRET_KEY)
+    secret_key: str = "dev-insecure-change-me-in-production"
+    access_token_ttl_days: int = 30
 
     model_config = {"env_file": str(_env_file)}
 
