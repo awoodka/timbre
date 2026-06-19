@@ -69,9 +69,9 @@ const LANDMARKS = [
 ]
 
 const COLOR_MODES = [
-  { key: 'medium', label: 'By medium' },
-  { key: 'dominant', label: 'By emotion' },
-  { key: 'dimension', label: 'By dimension' },
+  { key: 'medium', label: 'Medium' },
+  { key: 'dominant', label: 'Emotion' },
+  { key: 'dimension', label: 'Dimension' },
 ]
 const MEDIA_KEYS = Object.keys(MEDIA_TYPES)
 
@@ -247,10 +247,10 @@ export default function Explore() {
     if (colorMode === 'dimension') {
       const colors = visible.map((p) => p.emotion_breakdown?.[dimension] ?? 0)
       const base = { x: visible.map((p) => p.x), y: visible.map((p) => p.y), z: visible.map((p) => p.z) }
-      halos.push({ type: 'scatter3d', mode: 'markers', ...base, hoverinfo: 'skip', showlegend: false,
-        marker: { size: 13, opacity: 0.13, color: colors, colorscale: 'YlOrRd', cmin: 0, cmax: 1 } })
-      markers.push({ type: 'scatter3d', mode: 'markers', ...base, customdata: visible.map((p) => p.id),
-        text: visible.map(hoverText), hovertemplate: '%{text}<extra></extra>',
+      halos.push({ type: 'scatter3d', mode: 'markers', ...base, customdata: visible.map((p) => p.id),
+        text: visible.map(hoverText), hovertemplate: '%{text}<extra></extra>', showlegend: false,
+        marker: { size: 14, opacity: 0.13, color: colors, colorscale: 'YlOrRd', cmin: 0, cmax: 1 } })
+      markers.push({ type: 'scatter3d', mode: 'markers', ...base, hoverinfo: 'skip',
         marker: { size: 5, opacity: 0.95, color: colors, colorscale: 'YlOrRd', cmin: 0, cmax: 1,
           colorbar: { title: { text: fmt(dimension), font: { color: '#c9b8a8' } }, tickfont: { color: '#c9b8a8' }, thickness: 12, len: 0.5, outlinewidth: 0 } } })
     } else {
@@ -265,10 +265,11 @@ export default function Explore() {
       for (const k of keys) {
         const g = groups[k]
         const base = { x: g.map((p) => p.x), y: g.map((p) => p.y), z: g.map((p) => p.z) }
-        halos.push({ type: 'scatter3d', mode: 'markers', ...base, hoverinfo: 'skip', showlegend: false,
-          marker: { size: 13, opacity: 0.14, color: colorFor(k) } })
-        markers.push({ type: 'scatter3d', mode: 'markers', name: labelFor(k), ...base, customdata: g.map((p) => p.id),
-          text: g.map(hoverText), hovertemplate: '%{text}<extra></extra>',
+        // Hover/click live on the bigger halo so points are easy to target; the crisp dot is cosmetic.
+        halos.push({ type: 'scatter3d', mode: 'markers', ...base, customdata: g.map((p) => p.id),
+          text: g.map(hoverText), hovertemplate: '%{text}<extra></extra>', showlegend: false,
+          marker: { size: 14, opacity: 0.14, color: colorFor(k) } })
+        markers.push({ type: 'scatter3d', mode: 'markers', name: labelFor(k), ...base, hoverinfo: 'skip',
           marker: { size: 5, opacity: 0.92, color: colorFor(k) } })
       }
     }

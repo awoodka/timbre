@@ -1439,6 +1439,9 @@ button:disabled {
 .warm-dark .seg-btn { color: var(--xp-text-dim); }
 .warm-dark .seg-btn.on { background: var(--xp-accent); color: #2a201a; }
 .warm-dark .seg-btn:not(.on):hover { background: rgba(255, 255, 255, 0.07); color: var(--xp-text); }
+/* color-mode control fills the lens panel with three equal-width buttons */
+.xp-lens .seg { display: flex; width: 100%; }
+.xp-lens .seg-btn { flex: 1; min-width: 0; padding: 0.45rem 0.4rem; font-size: 0.78rem; text-align: center; }
 .warm-dark .sort-select {
   background: rgba(255, 255, 255, 0.05);
   border-color: var(--xp-panel-brd);
