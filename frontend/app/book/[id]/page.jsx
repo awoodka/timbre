@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
+import BookCover from '@/components/BookCover'
 import EmotionRadar from '@/components/EmotionRadar'
 import EmotionBar from '@/components/EmotionBar'
 
@@ -39,17 +40,19 @@ export default function BookDetail() {
         &larr; Back
       </button>
 
-      <h1 style={{ marginTop: '1rem' }}>{book.title}</h1>
-      <div className="author">{book.creator}</div>
-
-      {book.metadata && (
-        <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0.25rem 0 1rem' }}>
-          {book.metadata.year && <span>{book.metadata.year}</span>}
-          {book.metadata.genre && (
-            <span> &middot; {book.metadata.genre.join(', ')}</span>
+      <div className="detail-header">
+        <BookCover url={book.cover_image_url} size="large" />
+        <div className="detail-header-info">
+          <h1>{book.title}</h1>
+          <div className="author">{book.creator}</div>
+          {book.metadata && (
+            <div className="detail-meta">
+              {book.metadata.year && <span>{book.metadata.year}</span>}
+              {book.metadata.genre && <span> &middot; {book.metadata.genre.join(', ')}</span>}
+            </div>
           )}
         </div>
-      )}
+      </div>
 
       {book.description && (
         <>
@@ -83,6 +86,7 @@ export default function BookDetail() {
           <div className="similar-list">
             {similar.map(({ item: sim, similarity }) => (
               <Link key={sim.id} href={`/book/${sim.id}`} className="similar-item">
+                <BookCover url={sim.cover_image_url} size="small" />
                 <div className="info">
                   <h4>{sim.title}</h4>
                   <div className="author">{sim.creator}</div>

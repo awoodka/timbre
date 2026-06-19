@@ -4,6 +4,7 @@ export default function BookCover({ url, size = 'medium' }) {
   const sizes = {
     small: { width: 40, height: 60 },
     medium: { width: 64, height: 96 },
+    large: { width: 150, height: 225 },
   }
   const { width, height } = sizes[size] || sizes.medium
 
