@@ -1,99 +1,175 @@
 import numpy as np
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import text
+from fastapi import APIRouter, Depends
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth import get_current_user
 from app.database import get_db
+from app.dimensions import DIMENSION_KEYS, EMOTIONAL_DIMENSIONS, NUM_DIMENSIONS
 from app.models.media import MediaItem
-from app.schemas import MediaResponse, MediaSimilarResponse, RecommendRequest
+from app.models.user import Rating, User
+from app.schemas import (
+    MediaResponse,
+    MediaSimilarResponse,
+    ReasonOut,
+    RecommendRequest,
+    RecommendResponse,
+)
+from app.services.feedback import build_taste_profile
+from app.services.mood import blend_vectors, build_mood_vector
 
 router = APIRouter(prefix="/api", tags=["recommendations"])
 
-# Rating midpoint: ratings above this pull toward, below push away
-RATING_MIDPOINT = 2.5
+# How many works a user must log before the PURE-TASTE recommender unlocks.
+# Experience search (a mood and/or a non-"any" ending) is NOT gated.
+MIN_LOGGED_WORKS = 4
+# A liked/sought emotion is a "reason" for a rec if the work scores at least this raw.
+REASON_THRESHOLD = 0.5
+
+# Experience search — soft ending lean. We don't hard-filter on how a work ends;
+# instead the ranking subtracts a small penalty proportional to the distance between
+# a work's raw ending_valence and the requested tone's target, so results *lean*
+# toward that landing without excluding strong mood/taste matches.
+LAMBDA_END = 0.25
+ENDING_TARGETS = {"bleak": 0.15, "bittersweet": 0.5, "uplifting": 0.85}
+# A result earns an "ends …" reason only when it genuinely lands in that band.
+ENDING_BANDS = {  # [lo, hi) on raw ending_valence
+    "bleak": (-0.01, 0.4),
+    "bittersweet": (0.4, 0.6),
+    "uplifting": (0.6, 1.01),
+}
+ENDING_REASON_NAME = {
+    "bleak": "ends bleak",
+    "bittersweet": "bittersweet ending",
+    "uplifting": "ends uplifting",
+}
+
+_NAME = {d["key"]: d["name"] for d in EMOTIONAL_DIMENSIONS}
+# Raw ending_valence, coalesced to neutral for any malformed/missing breakdown.
+_EV = "COALESCE((emotion_breakdown->>'ending_valence')::float, 0.5)"
 
 
-def build_preference_vector(
-    vectors: list[np.ndarray], ratings: list[float]
-) -> np.ndarray:
-    """
-    Build an emotional preference direction from rated books.
-
-    The stored vectors are STANDARDIZED (mean-centered against the corpus centroid),
-    so the natural blend is a signed weighted sum around the rating midpoint (2.5):
-      1 → -1.5   2 → -0.5   3 → +0.5   4 → +1.5   5 → +2.5
-
-    A positive weight pulls toward a book's emotional direction ("want more of
-    this"); a negative weight subtracts it, pushing toward the opposite direction
-    in the centered space ("want the opposite"). The result is normalized.
-
-    (No complement / non-negative clamp: those were artifacts of the old [0,1]
-    vectors. In mean-centered space the opposite of a profile is simply its
-    negation, which the signed weight already produces.)
-    """
-    preference = np.zeros_like(vectors[0])
-
-    for vec, rating in zip(vectors, ratings):
-        preference += vec * (rating - RATING_MIDPOINT)
-
-    norm = np.linalg.norm(preference)
-    if norm > 0:
-        preference = preference / norm
-
-    return preference
-
-
-@router.post("/recommend", response_model=list[MediaSimilarResponse])
+@router.post("/recommend", response_model=RecommendResponse)
 async def recommend_media(
     req: RecommendRequest,
     db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
-    if not req.ratings:
-        raise HTTPException(status_code=400, detail="At least one rating is required")
+    """Recommend works by emotional fit. Two modes share this endpoint:
 
-    vectors = []
-    ratings = []
-    rated_ids = set()
+    - **Pure taste** (default body): rank the corpus against the user's aggregated
+      per-emotion taste profile. Gated until MIN_LOGGED_WORKS works are logged.
+    - **Experience search** (a `mood` map and/or a non-"any" `ending`): the user
+      composes the experience they want — feelings to seek/avoid + how it lands —
+      blended with their taste by the `alpha` dial. Ungated: it works with zero
+      ratings (pure mood) and taste blends in automatically once available.
 
-    for r in req.ratings:
-        item = await db.get(MediaItem, r.media_id)
-        if not item:
-            raise HTTPException(
-                status_code=404, detail=f"Media item {r.media_id} not found"
-            )
-        if item.emotion_vector is None:
-            raise HTTPException(
-                status_code=400,
-                detail=f"'{item.title}' has not been analyzed yet",
-            )
-        vectors.append(np.array(item.emotion_vector, dtype=np.float64))
-        ratings.append(r.rating)
-        rated_ids.add(str(item.id))
+    Both rank with the same pgvector cosine over standardized (mean-centered)
+    vectors; experience search additionally leans the result toward the requested
+    ending via a soft penalty on each work's raw ending_valence.
+    """
+    rows = list(await db.scalars(select(Rating).where(Rating.user_id == user.id)))
+    is_experience = bool(req.mood) or req.ending != "any"
 
-    preference = build_preference_vector(vectors, ratings)
+    taste = build_taste_profile([r.feedback for r in rows]) if rows else np.zeros(NUM_DIMENSIONS)
 
-    vector_str = "[" + ",".join(str(v) for v in preference.tolist()) + "]"
+    if not is_experience:
+        # ── Pure-taste path (gated) ──
+        if len(rows) < MIN_LOGGED_WORKS:
+            return RecommendResponse(gated=True, logged=len(rows), needed=MIN_LOGGED_WORKS)
+        norm = float(np.linalg.norm(taste))
+        if norm == 0.0:
+            # Enough works logged, but no usable marks (all neutral / cancelling).
+            return RecommendResponse(logged=len(rows), needed=MIN_LOGGED_WORKS)
+        query_vec = taste / norm
+        liked = {DIMENSION_KEYS[i] for i, w in enumerate(query_vec) if w > 0}
+    else:
+        # ── Experience search (ungated) ──
+        mood_vec = build_mood_vector(req.mood or {})
+        query_vec = blend_vectors(mood_vec, taste, req.alpha)
+        if float(np.linalg.norm(query_vec)) == 0.0 and req.ending == "any":
+            # No feelings picked and no taste yet → nothing to rank.
+            return RecommendResponse(logged=len(rows), needed=MIN_LOGGED_WORKS)
+        sought = {DIMENSION_KEYS[i] for i, w in enumerate(mood_vec) if w > 0}
+        # Reasons come from the feelings the user asked for; if they leaned only on
+        # taste (no seeks), fall back to the blended-positive emotions.
+        liked = sought or {DIMENSION_KEYS[i] for i, w in enumerate(query_vec) if w > 0}
 
-    placeholders = ", ".join(f"'{rid}'" for rid in rated_ids)
-    query = text(
-        f"""
-        SELECT id, 1 - (emotion_vector <=> CAST(:vec AS vector)) as similarity
-        FROM media
-        WHERE id NOT IN ({placeholders}) AND emotion_vector IS NOT NULL
-        ORDER BY emotion_vector <=> CAST(:vec AS vector)
-        LIMIT :lim
-        """
-    )
-    result = await db.execute(query, {"vec": vector_str, "lim": req.limit})
-    rows = result.fetchall()
+    db_rows = await _rank(db, query_vec, {str(r.media_id) for r in rows}, req.ending, req.limit)
 
-    recommendations = []
-    for row in rows:
+    recs = []
+    for row in db_rows:
         item = await db.get(MediaItem, row[0])
-        recommendations.append(
+        bd = item.emotion_breakdown or {}
+        reason_keys = sorted(
+            (k for k in liked if bd.get(k, 0) >= REASON_THRESHOLD),
+            key=lambda k: -bd.get(k, 0.0),
+        )[:3]
+        reasons = [ReasonOut(key=k, name=_NAME.get(k, k)) for k in reason_keys]
+        # Truthful ending reason: only when the work actually lands in-band.
+        if req.ending != "any":
+            lo, hi = ENDING_BANDS[req.ending]
+            if lo <= bd.get("ending_valence", 0.5) < hi:
+                reasons.append(
+                    ReasonOut(
+                        key="ending_valence",
+                        name=ENDING_REASON_NAME[req.ending],
+                        kind="ending",
+                    )
+                )
+        recs.append(
             MediaSimilarResponse(
                 item=MediaResponse.from_orm_item(item),
                 similarity=round(float(row[1]), 4),
+                reasons=reasons,
             )
         )
-    return recommendations
+
+    return RecommendResponse(logged=len(rows), needed=MIN_LOGGED_WORKS, recommendations=recs)
+
+
+async def _rank(db, query_vec, rated_ids, ending, limit):
+    """Rank the corpus by emotional fit, excluding already-rated works.
+
+    The displayed `similarity` is always the pure cosine match. The ORDER BY leans
+    toward the requested ending via a soft penalty on raw ending_valence ("any" =
+    no lean, i.e. the original pure-cosine ranking). If the query vector is empty
+    (ending-only search by a brand-new user), we rank purely by how close each
+    work lands to the target ending.
+    """
+    params = {"lim": limit}
+    exclude = ""
+    if rated_ids:
+        placeholders = ", ".join(f"'{rid}'" for rid in rated_ids)
+        exclude = f"AND id NOT IN ({placeholders})"
+
+    zero_query = float(np.linalg.norm(query_vec)) == 0.0
+
+    if zero_query:
+        # Ending-only (no feelings, no taste): order by closeness to the ending.
+        params["target"] = ENDING_TARGETS[ending]
+        select_sim = f"1 - abs({_EV} - :target)"
+        order_by = f"abs({_EV} - :target) ASC"
+    else:
+        params["vec"] = "[" + ",".join(str(v) for v in query_vec.tolist()) + "]"
+        select_sim = "1 - (emotion_vector <=> CAST(:vec AS vector))"
+        if ending == "any":
+            order_by = "emotion_vector <=> CAST(:vec AS vector) ASC"
+        else:
+            params["lam"] = LAMBDA_END
+            params["target"] = ENDING_TARGETS[ending]
+            order_by = (
+                f"((1 - (emotion_vector <=> CAST(:vec AS vector))) "
+                f"- :lam * abs({_EV} - :target)) DESC"
+            )
+
+    query = text(
+        f"""
+        SELECT id, {select_sim} AS similarity
+        FROM media
+        WHERE emotion_vector IS NOT NULL {exclude}
+        ORDER BY {order_by}
+        LIMIT :lim
+        """
+    )
+    return (await db.execute(query, params)).fetchall()

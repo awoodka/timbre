@@ -170,3 +170,12 @@ EMOTIONAL_DIMENSIONS: list[dict] = [
 
 DIMENSION_KEYS = [d["key"] for d in EMOTIONAL_DIMENSIONS]
 NUM_DIMENSIONS = len(EMOTIONAL_DIMENSIONS)
+
+# The 6 structural/arc axes are bipolar (0.5 = neutral), not "felt emotions" a
+# viewer would like or dislike. Only the FELT emotions are surfaced for per-emotion
+# rating and used to build a user's emotional taste profile.
+STRUCTURAL_KEYS = {
+    "pacing", "emotional_complexity", "predictability",
+    "catharsis", "emotional_trajectory", "ending_valence",
+}
+FELT_KEYS = [k for k in DIMENSION_KEYS if k not in STRUCTURAL_KEYS]

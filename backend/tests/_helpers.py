@@ -434,18 +434,99 @@ def mean_cross_sim(corpus: dict, group_a, group_b) -> float:
 
 
 def preference_recommend(corpus: dict, ratings, k: int = 10) -> list:
-    """Replicate the /recommend ranking against the loaded corpus.
+    """Replicate the production /recommend ranking against the loaded corpus, using
+    the per-emotion taste-profile model.
 
-    `ratings` is a list of (title, rating). Uses the production
-    build_preference_vector so tests exercise the real preference logic.
+    `ratings` stays a list of (title, star) tuples so the test files are unchanged.
+    A high star is treated as the user LIKING that work's most-prevalent felt
+    emotions (+1), a low star as DISLIKING them (-1) — exactly the signal the new UI
+    collects. We aggregate a taste-profile weight vector (build_taste_profile) and
+    rank the rest of the corpus by cosine against the standardized vectors, like the
+    real endpoint.
     """
-    from app.routers.recommend import build_preference_vector
+    from app.dimensions import STRUCTURAL_KEYS
+    from app.services.feedback import build_taste_profile
 
-    vecs = [corpus[t]["vec"] for t, _ in ratings]
-    pref = build_preference_vector(vecs, [r for _, r in ratings])
-    rated = {t for t, _ in ratings}
+    feedback_maps = []
+    rated = set()
+    for title, star in ratings:
+        rated.add(title)
+        mark = 1 if star >= 3.5 else (-1 if star <= 2.5 else 0)
+        if mark == 0:
+            continue
+        scores = corpus[title]["scores"]
+        top = sorted(
+            (key for key in scores if key not in STRUCTURAL_KEYS),
+            key=lambda key: -scores[key],
+        )[:6]
+        feedback_maps.append({key: mark for key in top})
+
+    weights = build_taste_profile(feedback_maps)
+    norm = float(np.linalg.norm(weights))
+    if norm == 0:
+        return []
+    weights = weights / norm
     ranked = sorted(
-        ((cosine(pref, corpus[t]["vec"]), t) for t in corpus if t not in rated),
+        ((cosine(weights, corpus[t]["vec"]), t) for t in corpus if t not in rated),
         reverse=True,
     )
+    return [t for _, t in ranked[:k]]
+
+
+# Targets / penalty weight mirror app/routers/recommend.py (experience search).
+_ENDING_TARGETS = {"bleak": 0.15, "bittersweet": 0.5, "uplifting": 0.85}
+_LAMBDA_END = 0.25
+
+
+def mood_recommend(
+    corpus: dict,
+    seek=(),
+    avoid=(),
+    ending: str = "any",
+    ratings=(),
+    alpha: float = 0.6,
+    k: int = 10,
+) -> list:
+    """Replicate the production experience-search ranking against the loaded corpus.
+
+    Build a mood direction from seek/avoid feelings, blend it with an optional taste
+    profile (from `(title, star)` ratings, encoded like `preference_recommend`) via
+    the alpha dial, rank by cosine against the standardized vectors, then lean toward
+    `ending` with the same soft penalty on raw ending_valence the endpoint applies.
+    """
+    from app.dimensions import STRUCTURAL_KEYS
+    from app.services.feedback import build_taste_profile
+    from app.services.mood import blend_vectors, build_mood_vector
+
+    mood = {key: 1 for key in seek}
+    mood.update({key: -1 for key in avoid})
+    mood_vec = build_mood_vector(mood)
+
+    feedback_maps = []
+    rated = set()
+    for title, star in ratings:
+        rated.add(title)
+        mark = 1 if star >= 3.5 else (-1 if star <= 2.5 else 0)
+        if mark == 0:
+            continue
+        scores = corpus[title]["scores"]
+        top = sorted(
+            (key for key in scores if key not in STRUCTURAL_KEYS),
+            key=lambda key: -scores[key],
+        )[:6]
+        feedback_maps.append({key: mark for key in top})
+    taste = build_taste_profile(feedback_maps)
+
+    query = blend_vectors(mood_vec, taste, alpha)
+    if float(np.linalg.norm(query)) == 0:
+        return []
+
+    def score(title: str) -> float:
+        c = cosine(query, corpus[title]["vec"])
+        if ending == "any":
+            return c
+        ev = corpus[title]["scores"].get("ending_valence", 0.5)
+        return c - _LAMBDA_END * abs(ev - _ENDING_TARGETS[ending])
+
+    ranked = sorted(((score(t), t) for t in corpus if t not in rated), reverse=True)
     return [t for _, t in ranked[:k]]

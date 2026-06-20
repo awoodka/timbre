@@ -204,8 +204,8 @@ export default function Explore() {
     const byId = new Map(visible.map((p) => [p.id, p]))
     if (ratings.length) {
       const top = [...ratings]
-        .sort((a, b) => b.rating - a.rating)
-        .map((r) => { const p = byId.get(r.media_id); return p ? { ...p, rating: r.rating } : null })
+        .sort((a, b) => b.resonance - a.resonance)
+        .map((r) => { const p = byId.get(r.media_id); return p ? { ...p, resonance: r.resonance } : null })
         .filter(Boolean)
         .slice(0, 10)
       if (top.length) return { items: top, personalized: true }
@@ -286,7 +286,7 @@ export default function Explore() {
       const lm = landmarks.items, personal = landmarks.personalized
       out.push({ type: 'scatter3d', mode: 'markers+text',
         x: lm.map((p) => p.x), y: lm.map((p) => p.y), z: lm.map((p) => p.z),
-        text: lm.map((p) => (personal ? `${p.title}  ★${Math.round(p.rating)}` : p.title)),
+        text: lm.map((p) => (personal ? `${p.title}  ♥` : p.title)),
         textposition: 'top center', textfont: { size: 9, color: personal ? '#e3c66a' : '#e8dccb' },
         marker: { size: personal ? 4.5 : 3, color: personal ? '#e3c66a' : '#e8dccb' },
         hoverinfo: 'skip', showlegend: false })
@@ -403,7 +403,7 @@ export default function Explore() {
         <div className="xp-lens-toggles">
           <label className="explore-toggle"><input type="checkbox" checked={showClouds} onChange={(e) => setShowClouds(e.target.checked)} /> Clouds</label>
           <label className="explore-toggle"><input type="checkbox" checked={showRegions} onChange={(e) => setShowRegions(e.target.checked)} /> Regions</label>
-          <label className="explore-toggle"><input type="checkbox" checked={showLandmarks} onChange={(e) => setShowLandmarks(e.target.checked)} /> {landmarks.personalized ? 'Top-rated' : 'Landmarks'}</label>
+          <label className="explore-toggle"><input type="checkbox" checked={showLandmarks} onChange={(e) => setShowLandmarks(e.target.checked)} /> {landmarks.personalized ? 'Favorites' : 'Landmarks'}</label>
         </div>
       </div>
 

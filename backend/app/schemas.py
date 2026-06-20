@@ -1,7 +1,10 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from app.dimensions import FELT_KEYS
 
 
 class MediaCreate(BaseModel):
@@ -47,19 +50,47 @@ class MediaResponse(BaseModel):
         )
 
 
+class ReasonOut(BaseModel):
+    key: str
+    name: str
+    # "feeling" = an emotion the rec delivers; "ending" = how it lands (experience search).
+    kind: Literal["feeling", "ending"] = "feeling"
+
+
 class MediaSimilarResponse(BaseModel):
     item: MediaResponse
     similarity: float
+    reasons: list[ReasonOut] = []
 
 
-class RatingInput(BaseModel):
-    media_id: UUID
-    rating: float = Field(ge=1, le=5)
+class RecommendResponse(BaseModel):
+    gated: bool = False        # true when the user hasn't logged enough works yet
+    logged: int = 0
+    needed: int = 0
+    recommendations: list[MediaSimilarResponse] = []
 
 
 class RecommendRequest(BaseModel):
-    ratings: list[RatingInput]
+    # Recommendations are computed from the user's stored feedback (server-side),
+    # so the body only carries how many to return.
     limit: int = Field(default=10, ge=1, le=50)
+
+    # ---- Experience search (all optional; absent ⇒ legacy pure-taste mode) ----
+    # Compose the experience you want: feelings to seek (+1) / avoid (-1), how it
+    # should land, and how much to lean on this mood vs. your usual taste.
+    mood: dict[str, Literal[-1, 1]] | None = None
+    ending: Literal["any", "bleak", "bittersweet", "uplifting"] = "any"
+    alpha: float = Field(default=0.6, ge=0.0, le=1.0)  # 1.0 = all mood, 0.0 = all taste
+
+    @field_validator("mood")
+    @classmethod
+    def _felt_keys_only(cls, v: dict | None) -> dict | None:
+        if v is None:
+            return v
+        bad = sorted(k for k in v if k not in FELT_KEYS)
+        if bad:
+            raise ValueError(f"not felt-emotion keys: {bad}")
+        return v
 
 
 class DimensionResponse(BaseModel):
@@ -99,11 +130,22 @@ class UserUpdate(BaseModel):
 # ---- Per-user ratings ----
 
 class RatingUpsert(BaseModel):
-    rating: float = Field(ge=1, le=5)
+    # {emotion_key: -2…+2} on a 5-point preference scale (not-for-me … loved);
+    # neutral (0) emotions are omitted.
+    feedback: dict[str, Literal[-2, -1, 1, 2]]
+
+    @field_validator("feedback")
+    @classmethod
+    def _felt_keys_only(cls, v: dict) -> dict:
+        bad = sorted(k for k in v if k not in FELT_KEYS)
+        if bad:
+            raise ValueError(f"not felt-emotion keys: {bad}")
+        return v
 
 
 class RatingResponse(BaseModel):
     media_id: UUID
-    rating: float
+    feedback: dict[str, int]
+    resonance: float
 
     model_config = {"from_attributes": True}

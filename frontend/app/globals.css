@@ -749,6 +749,85 @@ button:disabled {
   color: var(--error);
 }
 
+/* ---- Emotion feedback logging (discover) ---- */
+.log-panel {
+  margin-top: 0.85rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.log-panel-head { display: flex; gap: 0.75rem; align-items: center; }
+.log-panel-meta { display: flex; flex-direction: column; min-width: 0; }
+.log-hint { font-size: 0.85rem; color: var(--text-muted); margin: 0.85rem 0 0.6rem; }
+
+.emotion-feedback { display: flex; flex-direction: column; gap: 0.4rem; }
+.ef-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.ef-label {
+  font-size: 0.8rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 20px;
+  text-transform: capitalize;
+  font-weight: 500;
+}
+.ef-scale { display: flex; align-items: center; gap: 0.3rem; flex-shrink: 0; }
+.ef-end { font-size: 0.62rem; color: var(--text-muted); white-space: nowrap; }
+.ef-dot {
+  width: 15px;
+  height: 15px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.ef-dot:hover { border-color: var(--accent); transform: scale(1.15); }
+.ef-dot.on { background: var(--text-muted); border-color: var(--text-muted); }
+.ef-dot.on.pos { background: var(--success); border-color: var(--success); }
+.ef-dot.on.neg { background: var(--error); border-color: var(--error); }
+
+/* Logged-work rows */
+.rating-row.logged { flex-direction: column; align-items: stretch; gap: 0.6rem; }
+.logged-head { display: flex; align-items: center; gap: 0.85rem; }
+.logged-head .rated-book-info { flex: 1; min-width: 0; }
+
+.fb-summary { display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; }
+.fb-summary.muted { color: var(--text-muted); font-size: 0.8rem; }
+.fb-chip {
+  font-size: 0.72rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 10px;
+  white-space: nowrap;
+  background: var(--surface-hover);
+  color: var(--text-muted);
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.2rem 0.45rem;
+  flex-shrink: 0;
+}
+.link-btn:hover { color: var(--accent-hover); text-decoration: underline; }
+
+.gate-msg {
+  margin-top: 0.85rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
 .confirm-delete {
   display: flex;
   align-items: center;
@@ -1577,3 +1656,140 @@ button:disabled {
   border-radius: 9px;
 }
 .xp-sp-link:hover { filter: brightness(1.06); }
+
+/* ============================================================
+   Experience search — MoodComposer (/discover)
+   ============================================================ */
+.mood-composer {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+.mc-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.95rem 1.15rem;
+  background: transparent;
+  color: var(--text);
+  border: none;
+  border-radius: 0;
+  text-align: left;
+}
+.mc-toggle:hover { background: var(--surface-hover); }
+.mc-toggle-text { display: flex; flex-direction: column; gap: 0.15rem; }
+.mc-toggle-title { font-weight: 600; font-size: 0.98rem; }
+.mc-toggle-sub { font-size: 0.8rem; color: var(--text-muted); font-weight: 400; }
+.mc-caret { color: var(--text-muted); transition: transform 0.2s; flex-shrink: 0; }
+.mc-caret.up { transform: rotate(180deg); }
+
+.mc-body { padding: 0.25rem 1.15rem 1.15rem; border-top: 1px solid var(--border); }
+
+.mc-presets { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.9rem 0 0.3rem; }
+.mc-preset {
+  padding: 0.32rem 0.7rem;
+  background: var(--accent-light);
+  color: var(--accent);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+.mc-preset:hover { background: var(--accent); color: #fff; }
+
+.mc-section { margin-top: 1.1rem; }
+.mc-label { font-size: 0.82rem; font-weight: 600; color: var(--text); margin-bottom: 0.5rem; }
+.mc-hint { font-weight: 400; color: var(--text-muted); font-size: 0.75rem; margin-left: 0.35rem; }
+
+.mc-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.mc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.3rem 0.65rem;
+  background: var(--surface);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+.mc-chip:hover { background: var(--surface-hover); }
+.mc-chip.seek { font-weight: 600; border-width: 1px; }
+.mc-chip.seek:hover { filter: brightness(0.97); }
+.mc-chip.avoid {
+  background: var(--bg);
+  border-style: dashed;
+  border-color: var(--text-muted);
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+.mc-mark { font-weight: 700; line-height: 1; }
+
+.mc-more {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.5rem 0 0;
+}
+.mc-more:hover { background: none; text-decoration: underline; color: var(--accent-hover); }
+
+.mc-seg {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  overflow: hidden;
+}
+.mc-seg-btn {
+  flex: 1;
+  padding: 0.5rem 0.4rem;
+  background: var(--surface);
+  color: var(--text);
+  border: none;
+  border-right: 1px solid var(--border);
+  border-radius: 0;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+.mc-seg-btn:last-child { border-right: none; }
+.mc-seg-btn:hover { background: var(--surface-hover); }
+.mc-seg-btn.on { background: var(--accent); color: #fff; }
+.mc-seg-btn.on:hover { background: var(--accent-hover); }
+
+.mc-slider { width: 100%; accent-color: var(--accent); cursor: pointer; }
+.mc-slider-ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+.mc-error { color: var(--error); font-size: 0.85rem; margin: 0.8rem 0 0; }
+
+.mc-actions { display: flex; align-items: center; gap: 0.75rem; margin-top: 1.25rem; }
+.mc-find { padding: 0.6rem 1.4rem; }
+.mc-clear {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 0.3rem 0.4rem;
+}
+.mc-clear:hover { background: none; color: var(--text); text-decoration: underline; }
+
+/* "ends uplifting / bleak" reason chip — distinct from emotion reason tags. */
+.reason-tag.ending-tag {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  font-style: italic;
+}

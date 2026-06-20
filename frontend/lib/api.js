@@ -19,8 +19,12 @@ export const api = {
   getSimilar: (id, limit = 5) => request(`/media/${id}/similar?limit=${limit}`),
   createItem: (data) => request('/media', { method: 'POST', body: JSON.stringify(data) }),
   reanalyze: (id) => request(`/media/${id}/reanalyze`, { method: 'POST' }),
-  recommend: (ratings, limit = 10) =>
-    request('/recommend', { method: 'POST', body: JSON.stringify({ ratings, limit }) }),
+  recommend: (limit = 10) =>
+    request('/recommend', { method: 'POST', body: JSON.stringify({ limit }) }),
+  // Experience search: compose a mood (seek/avoid feelings), an ending tone, and
+  // how much to lean on it vs. your usual taste. Ungated (works with no ratings).
+  recommendExperience: ({ mood = {}, ending = 'any', alpha = 0.6, limit = 12 } = {}) =>
+    request('/recommend', { method: 'POST', body: JSON.stringify({ mood, ending, alpha, limit }) }),
   getDimensions: () => request('/dimensions'),
   getProjection: (method = 'umap') => request(`/projection?method=${method}`),
 
@@ -35,7 +39,7 @@ export const api = {
 
   // ---- per-user ratings ----
   getRatings: () => request('/ratings'),
-  putRating: (media_id, rating) =>
-    request(`/ratings/${media_id}`, { method: 'PUT', body: JSON.stringify({ rating }) }),
+  putRating: (media_id, feedback) =>
+    request(`/ratings/${media_id}`, { method: 'PUT', body: JSON.stringify({ feedback }) }),
   deleteRating: (media_id) => request(`/ratings/${media_id}`, { method: 'DELETE' }),
 }

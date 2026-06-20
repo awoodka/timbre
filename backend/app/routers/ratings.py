@@ -9,6 +9,7 @@ from app.database import get_db
 from app.models.media import MediaItem
 from app.models.user import Rating, User
 from app.schemas import RatingResponse, RatingUpsert
+from app.services.feedback import compute_resonance
 
 router = APIRouter(prefix="/api/ratings", tags=["ratings"])
 
@@ -34,10 +35,14 @@ async def upsert_rating(
     existing = await db.scalar(
         select(Rating).where(Rating.user_id == user.id, Rating.media_id == media_id)
     )
+    resonance = compute_resonance(data.feedback)
     if existing:
-        existing.rating = data.rating
+        existing.feedback = data.feedback
+        existing.resonance = resonance
     else:
-        existing = Rating(user_id=user.id, media_id=media_id, rating=data.rating)
+        existing = Rating(
+            user_id=user.id, media_id=media_id, feedback=data.feedback, resonance=resonance
+        )
         db.add(existing)
     await db.commit()
     await db.refresh(existing)

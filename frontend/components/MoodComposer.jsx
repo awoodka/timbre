@@ -1,0 +1,183 @@
+'use client'
+
+import { useState } from 'react'
+import { api } from '@/lib/api'
+import { useRatings } from '@/lib/ratings-context'
+import { getEmotionColor } from '@/components/emotionColors'
+
+const fmt = (s) => s.replace(/_/g, ' ')
+
+// Headline feelings shown by default; the rest live behind "more feelings".
+const HEADLINE = [
+  'warmth', 'joy', 'hope', 'serenity', 'wonder', 'nostalgia',
+  'melancholy', 'grief', 'dread', 'tension', 'isolation', 'intimacy',
+  'anger', 'vulnerability', 'frenetic_energy', 'vastness',
+]
+const MORE = [
+  'confusion', 'empowerment', 'absurdity', 'alienation', 'obsession',
+  'claustrophobia', 'sensuality', 'moral_ambiguity', 'stillness',
+]
+
+// Quick presets — seed seek/avoid from the explore-page region archetypes.
+const PRESETS = [
+  { name: 'cozy · warm', seek: ['warmth', 'serenity', 'hope', 'intimacy'], avoid: ['dread', 'tension', 'grief'] },
+  { name: 'bleak · melancholy', seek: ['melancholy', 'grief', 'isolation', 'alienation'], avoid: ['warmth', 'joy', 'hope'] },
+  { name: 'tense · harrowing', seek: ['tension', 'dread', 'frenetic_energy'], avoid: ['serenity', 'warmth', 'stillness'] },
+  { name: 'awe · wonder', seek: ['wonder', 'vastness', 'hope'], avoid: ['claustrophobia'] },
+  { name: 'joyful · lively', seek: ['joy', 'warmth', 'frenetic_energy', 'empowerment'], avoid: ['grief', 'melancholy', 'dread'] },
+  { name: 'intimate · tender', seek: ['intimacy', 'vulnerability', 'sensuality', 'warmth'], avoid: ['vastness', 'frenetic_energy'] },
+]
+
+const ENDINGS = [
+  { key: 'any', label: 'Any' },
+  { key: 'bleak', label: 'Bleak' },
+  { key: 'bittersweet', label: 'Bittersweet' },
+  { key: 'uplifting', label: 'Uplifting' },
+]
+
+export default function MoodComposer() {
+  const { ratings, setResults } = useRatings()
+  const [open, setOpen] = useState(false)
+  const [picks, setPicks] = useState({})        // { emotion_key: 1 (seek) | -1 (avoid) }
+  const [ending, setEnding] = useState('any')
+  const [alpha, setAlpha] = useState(0.6)
+  const [showMore, setShowMore] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+
+  const hasRatings = ratings.length > 0
+  const canSearch = Object.keys(picks).length > 0 || ending !== 'any'
+  const isDirty = Object.keys(picks).length > 0 || ending !== 'any'
+
+  // neutral → seek → avoid → neutral
+  const cycle = (key) => setPicks((p) => {
+    const cur = p[key] || 0
+    const next = { ...p }
+    if (cur === 0) next[key] = 1
+    else if (cur === 1) next[key] = -1
+    else delete next[key]
+    return next
+  })
+
+  const applyPreset = (preset) => {
+    const next = {}
+    preset.seek.forEach((k) => { next[k] = 1 })
+    preset.avoid.forEach((k) => { next[k] = -1 })
+    setPicks(next)
+    if ([...preset.seek, ...preset.avoid].some((k) => MORE.includes(k))) setShowMore(true)
+  }
+
+  const clear = () => { setPicks({}); setEnding('any') }
+
+  const search = async () => {
+    if (!canSearch) return
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await api.recommendExperience({ mood: picks, ending, alpha, limit: 12 })
+      setResults(res.recommendations || [])
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const Chip = ({ k }) => {
+    const v = picks[k] || 0
+    const c = getEmotionColor(k)
+    const style = v === 1 ? { background: c.bg, color: c.color, borderColor: c.color } : undefined
+    return (
+      <button
+        type="button"
+        className={`mc-chip${v === 1 ? ' seek' : v === -1 ? ' avoid' : ''}`}
+        style={style}
+        onClick={() => cycle(k)}
+      >
+        {v !== 0 && <span className="mc-mark">{v === 1 ? '+' : '–'}</span>}
+        {fmt(k)}
+      </button>
+    )
+  }
+
+  return (
+    <div className="mood-composer">
+      <button type="button" className="mc-toggle" onClick={() => setOpen((o) => !o)}>
+        <span className="mc-toggle-text">
+          <span className="mc-toggle-title">Find something specific</span>
+          <span className="mc-toggle-sub">Compose a mood &amp; an ending — works even before you’ve rated anything</span>
+        </span>
+        <span className={`mc-caret${open ? ' up' : ''}`} aria-hidden>▾</span>
+      </button>
+
+      {open && (
+        <div className="mc-body">
+          <div className="mc-presets">
+            {PRESETS.map((p) => (
+              <button key={p.name} type="button" className="mc-preset" onClick={() => applyPreset(p)}>
+                {p.name}
+              </button>
+            ))}
+          </div>
+
+          <div className="mc-section">
+            <div className="mc-label">
+              Feelings <span className="mc-hint">tap to seek, tap again to avoid</span>
+            </div>
+            <div className="mc-chips">
+              {HEADLINE.map((k) => <Chip key={k} k={k} />)}
+              {showMore && MORE.map((k) => <Chip key={k} k={k} />)}
+            </div>
+            {!showMore && (
+              <button type="button" className="mc-more" onClick={() => setShowMore(true)}>
+                more feelings…
+              </button>
+            )}
+          </div>
+
+          <div className="mc-section">
+            <div className="mc-label">How it lands</div>
+            <div className="mc-seg">
+              {ENDINGS.map((e) => (
+                <button
+                  key={e.key}
+                  type="button"
+                  className={`mc-seg-btn${ending === e.key ? ' on' : ''}`}
+                  onClick={() => setEnding(e.key)}
+                >
+                  {e.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {hasRatings && (
+            <div className="mc-section">
+              <div className="mc-label">Balance</div>
+              <input
+                type="range" min="0" max="1" step="0.05" value={alpha}
+                onChange={(e) => setAlpha(parseFloat(e.target.value))}
+                className="mc-slider"
+              />
+              <div className="mc-slider-ends">
+                <span>my usual taste</span>
+                <span>this mood</span>
+              </div>
+            </div>
+          )}
+
+          {error && <p className="mc-error">{error}</p>}
+
+          <div className="mc-actions">
+            <button className="mc-find" onClick={search} disabled={!canSearch || loading}>
+              {loading ? <><span className="spinner" /> Finding…</> : 'Find it'}
+            </button>
+            {isDirty && (
+              <button type="button" className="mc-clear" onClick={clear}>Clear</button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

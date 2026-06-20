@@ -35,7 +35,8 @@ class User(Base):
 
 
 class Rating(Base):
-    """A user's rating (1-5) of a single media item. One per (user, media)."""
+    """A user's per-emotion feedback on a media item — which felt emotions they
+    liked (+1) / disliked (-1) — plus a derived overall `resonance`. One per (user, media)."""
 
     __tablename__ = "ratings"
     __table_args__ = (UniqueConstraint("user_id", "media_id", name="uq_user_media"),)
@@ -49,7 +50,10 @@ class Rating(Base):
     media_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("media.id", ondelete="CASCADE"), index=True, nullable=False
     )
-    rating: Mapped[float] = mapped_column(Float, nullable=False)
+    # {emotion_key: +1 (liked) | -1 (disliked)}; unmarked emotions are omitted (neutral).
+    feedback: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    # Derived overall score in [0,1] (server-computed from feedback); for sort/display.
+    resonance: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
