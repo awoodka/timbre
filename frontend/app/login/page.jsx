@@ -21,7 +21,7 @@ export default function LoginPage() {
     try {
       if (mode === 'login') await login(username.trim(), password)
       else await signup(username.trim(), password, displayName.trim())
-      router.push('/discover')
+      router.push('/recommendations')
     } catch (err) {
       setError(err.message)
     } finally {

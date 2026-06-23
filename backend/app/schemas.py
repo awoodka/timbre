@@ -81,6 +81,8 @@ class RecommendRequest(BaseModel):
     mood: dict[str, Literal[-1, 1]] | None = None
     ending: Literal["any", "bleak", "bittersweet", "uplifting"] = "any"
     alpha: float = Field(default=0.6, ge=0.0, le=1.0)  # 1.0 = all mood, 0.0 = all taste
+    # Optional medium filter (book/film/show/anime/manga/game) — powers per-medium rows.
+    medium: str | None = None
 
     @field_validator("mood")
     @classmethod

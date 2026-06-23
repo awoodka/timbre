@@ -95,7 +95,9 @@ async def recommend_media(
         # taste (no seeks), fall back to the blended-positive emotions.
         liked = sought or {DIMENSION_KEYS[i] for i, w in enumerate(query_vec) if w > 0}
 
-    db_rows = await _rank(db, query_vec, {str(r.media_id) for r in rows}, req.ending, req.limit)
+    db_rows = await _rank(
+        db, query_vec, {str(r.media_id) for r in rows}, req.ending, req.limit, req.medium
+    )
 
     recs = []
     for row in db_rows:
@@ -128,20 +130,26 @@ async def recommend_media(
     return RecommendResponse(logged=len(rows), needed=MIN_LOGGED_WORKS, recommendations=recs)
 
 
-async def _rank(db, query_vec, rated_ids, ending, limit):
+async def _rank(db, query_vec, rated_ids, ending, limit, medium=None):
     """Rank the corpus by emotional fit, excluding already-rated works.
 
     The displayed `similarity` is always the pure cosine match. The ORDER BY leans
     toward the requested ending via a soft penalty on raw ending_valence ("any" =
     no lean, i.e. the original pure-cosine ranking). If the query vector is empty
     (ending-only search by a brand-new user), we rank purely by how close each
-    work lands to the target ending.
+    work lands to the target ending. An optional `medium` restricts the candidate
+    set to one medium (powers per-medium "Beyond books" rows).
     """
     params = {"lim": limit}
     exclude = ""
     if rated_ids:
         placeholders = ", ".join(f"'{rid}'" for rid in rated_ids)
         exclude = f"AND id NOT IN ({placeholders})"
+
+    medium_clause = ""
+    if medium:
+        params["medium"] = medium
+        medium_clause = "AND medium = :medium"
 
     zero_query = float(np.linalg.norm(query_vec)) == 0.0
 
@@ -167,7 +175,7 @@ async def _rank(db, query_vec, rated_ids, ending, limit):
         f"""
         SELECT id, {select_sim} AS similarity
         FROM media
-        WHERE emotion_vector IS NOT NULL {exclude}
+        WHERE emotion_vector IS NOT NULL {exclude} {medium_clause}
         ORDER BY {order_by}
         LIMIT :lim
         """

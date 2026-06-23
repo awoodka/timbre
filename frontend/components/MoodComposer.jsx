@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { api } from '@/lib/api'
 import { useRatings } from '@/lib/ratings-context'
 import { getEmotionColor } from '@/components/emotionColors'
+import { getMediaType } from '@/components/mediaType'
 
 const fmt = (s) => s.replace(/_/g, ' ')
 
@@ -35,11 +36,14 @@ const ENDINGS = [
   { key: 'uplifting', label: 'Uplifting' },
 ]
 
+const MEDIA = ['book', 'film', 'show', 'anime', 'manga', 'game']
+
 export default function MoodComposer() {
   const { ratings, setResults } = useRatings()
   const [open, setOpen] = useState(false)
   const [picks, setPicks] = useState({})        // { emotion_key: 1 (seek) | -1 (avoid) }
   const [ending, setEnding] = useState('any')
+  const [medium, setMedium] = useState('any')
   const [alpha, setAlpha] = useState(0.6)
   const [showMore, setShowMore] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -47,7 +51,7 @@ export default function MoodComposer() {
 
   const hasRatings = ratings.length > 0
   const canSearch = Object.keys(picks).length > 0 || ending !== 'any'
-  const isDirty = Object.keys(picks).length > 0 || ending !== 'any'
+  const isDirty = Object.keys(picks).length > 0 || ending !== 'any' || medium !== 'any'
 
   // neutral → seek → avoid → neutral
   const cycle = (key) => setPicks((p) => {
@@ -67,14 +71,16 @@ export default function MoodComposer() {
     if ([...preset.seek, ...preset.avoid].some((k) => MORE.includes(k))) setShowMore(true)
   }
 
-  const clear = () => { setPicks({}); setEnding('any') }
+  const clear = () => { setPicks({}); setEnding('any'); setMedium('any') }
 
   const search = async () => {
     if (!canSearch) return
     setLoading(true)
     setError(null)
     try {
-      const res = await api.recommendExperience({ mood: picks, ending, alpha, limit: 12 })
+      const res = await api.recommendExperience({
+        mood: picks, ending, alpha, limit: 12, medium: medium === 'any' ? null : medium,
+      })
       setResults(res.recommendations || [])
     } catch (e) {
       setError(e.message)
@@ -148,6 +154,39 @@ export default function MoodComposer() {
                   {e.label}
                 </button>
               ))}
+            </div>
+          </div>
+
+          <div className="mc-section">
+            <div className="mc-label">Media type</div>
+            <div className="mc-chips">
+              <button
+                type="button"
+                className={`filter-pill${medium === 'any' ? ' active' : ''}`}
+                onClick={() => setMedium('any')}
+                style={medium === 'any'
+                  ? { background: 'var(--accent)', borderColor: 'var(--accent)', color: '#fff' }
+                  : { borderColor: 'var(--accent)', color: 'var(--accent)' }}
+              >
+                Any
+              </button>
+              {MEDIA.map((m) => {
+                const t = getMediaType(m)
+                const on = medium === m
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    className={`filter-pill${on ? ' active' : ''}`}
+                    onClick={() => setMedium(on ? 'any' : m)}
+                    style={on
+                      ? { background: t.color, borderColor: t.color, color: '#fff' }
+                      : { borderColor: t.color, color: t.color }}
+                  >
+                    {t.label}
+                  </button>
+                )
+              })}
             </div>
           </div>
 

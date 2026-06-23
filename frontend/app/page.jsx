@@ -28,7 +28,7 @@ function shuffle(arr) {
 
 export default function Home() {
   // The home page is public and viewable by everyone (the logo brings signed-in
-  // users back here); login/signup is what lands them on /discover, not a redirect.
+  // users back here); login/signup is what lands them on /recommendations, not a redirect.
   const { user } = useAuth()
   const [items, setItems] = useState([])
   const [loaded, setLoaded] = useState(false)
@@ -76,7 +76,7 @@ export default function Home() {
         <p className="hero-tagline">{TAGLINE}</p>
         <div className="hero-cta">
           {user
-            ? <Link href="/discover" className="btn">Start rating →</Link>
+            ? <Link href="/ratings" className="btn">Start rating →</Link>
             : <Link href="/login" className="btn">Get started →</Link>}
           <Link href="/catalogue" className="btn-ghost">Browse the catalogue</Link>
         </div>
@@ -174,7 +174,7 @@ export default function Home() {
       <section className="landing-cta">
         <h2>Ready to find your next favorite?</h2>
         {user
-          ? <Link href="/discover" className="btn">Go to your recommendations →</Link>
+          ? <Link href="/recommendations" className="btn">Go to your recommendations →</Link>
           : <Link href="/login" className="btn">Create your free account →</Link>}
       </section>
     </div>

@@ -19,12 +19,15 @@ export const api = {
   getSimilar: (id, limit = 5) => request(`/media/${id}/similar?limit=${limit}`),
   createItem: (data) => request('/media', { method: 'POST', body: JSON.stringify(data) }),
   reanalyze: (id) => request(`/media/${id}/reanalyze`, { method: 'POST' }),
-  recommend: (limit = 10) =>
-    request('/recommend', { method: 'POST', body: JSON.stringify({ limit }) }),
+  recommend: (limit = 10, medium = null) =>
+    request('/recommend', { method: 'POST', body: JSON.stringify({ limit, ...(medium ? { medium } : {}) }) }),
   // Experience search: compose a mood (seek/avoid feelings), an ending tone, and
   // how much to lean on it vs. your usual taste. Ungated (works with no ratings).
-  recommendExperience: ({ mood = {}, ending = 'any', alpha = 0.6, limit = 12 } = {}) =>
-    request('/recommend', { method: 'POST', body: JSON.stringify({ mood, ending, alpha, limit }) }),
+  recommendExperience: ({ mood = {}, ending = 'any', alpha = 0.6, limit = 12, medium = null } = {}) =>
+    request('/recommend', {
+      method: 'POST',
+      body: JSON.stringify({ mood, ending, alpha, limit, ...(medium ? { medium } : {}) }),
+    }),
   getDimensions: () => request('/dimensions'),
   getProjection: (method = 'umap') => request(`/projection?method=${method}`),
 

@@ -4,8 +4,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 
-// Auth-aware top nav. Home, Catalogue, and Explore are public; the Discover tool
-// and account menu are for signed-in users.
+// Auth-aware top nav. Home, Catalogue, and Explore are public; recommendations,
+// ratings, and the account menu are for signed-in users.
 export default function NavLinks() {
   const { user, loading, logout } = useAuth()
   const router = useRouter()
@@ -40,7 +40,8 @@ export default function NavLinks() {
 
   return (
     <div className="nav-links">
-      <Link href="/discover">Discover</Link>
+      <Link href="/recommendations">For You</Link>
+      <Link href="/ratings">My Ratings</Link>
       <Link href="/catalogue">Catalogue</Link>
       <Link href="/explore">Explore</Link>
       <div className="nav-user">

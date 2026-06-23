@@ -285,6 +285,16 @@ Decision §6 starts with the shared felt core only (aesthetics feed the LLM scor
 - **Concerns / open questions:** `LAMBDA_END=0.25` ending-lean strength and the preset→emotion seed maps are tuned by eye on the 300-work seed — revisit as the corpus grows (per the defer-tuning rule).
 - **Left off at:** **uncommitted on `main`** — this experience-search work sits on top of the also-uncommitted per-emotion **ratings redesign** (5-point scale, `feedback`/`resonance` model + migration, taste-profile recommender). Backend runs with `--reload --reload-dir app`. Next: decide commit grouping for the two bodies of work; cross-media tuning pass + music still pending; pre-deploy reminders stand (real `SECRET_KEY`, `Secure` cookies).
 
+### 2026-06-23
+- **Goal:** split the overloaded `/discover` into two focused pages — a filterable ratings library and a Netflix-style recommendations page.
+- **Did (recommendations):** new `/recommendations` ("For You") — horizontal "Smart mix" shelves: Top picks (taste, ≥4 ratings), "Because you loved X" (item-similar, ≥1), 4 mood rows + 2 arc rows (ungated experience search, so the page is populated even at 0 ratings), and a cross-media "Beyond books" row (≥4). Each `RecRow` fetches independently with skeletons and hides itself if empty. Cold-start hero + a "rate N more" gate strip below 4 ratings. MoodComposer moved here as "compose your own" → its results render as a "From your search" shelf.
+- **Did (ratings):** new `/ratings` ("My Ratings") — joins context ratings with media; filter by search / medium / mood (breakdown ≥0.5) / resonance-band; sort recent/resonance/title; **grid⇄list view toggle** (localStorage-persisted); logging (BookSearch) moved here; edit/remove inline in both layouts. Extracted `BookSearch` + `FeedbackSummary` into shared components; added `ShelfCard`/`RecRow`/`RatingItem`.
+- **Did (backend):** one new param — optional `medium` on `RecommendRequest` + an `AND medium=:medium` clause in `_rank` — powers per-medium taste rows. Curl-verified (film/book/none/bogus → no 500).
+- **Did (nav/routing):** NavLinks → "For You" + "My Ratings" (replacing Discover); home CTAs + login redirect → the new routes; `/discover` is now a client redirect stub to `/recommendations`.
+- **Decided:** Smart-mix partition (taste + loved + mood + arc + medium), not raw per-emotion rows; rec rows fetched as **parallel client calls** with per-row skeletons (no batched endpoint for MVP); ratings page gets a user-chosen grid⇄list toggle.
+- **Concerns / open questions:** ~6–10 independent rec calls per page load — fine at 300 items; revisit with a batched `/recommend/rows` endpoint if the corpus grows. Tiers verified via route-compile (200) + endpoint validation + clean diagnostics, not yet a full browser pass.
+- **Left off at:** **uncommitted on `main`** (stacked on the prior experience-search + ratings-redesign work, commit `3ca0dce`). Next: browser pass over the three rec tiers + the grid⇄list toggle; then commit. Pre-deploy reminders still stand (real `SECRET_KEY`, `Secure` cookies).
+
 <!--
 Template for future entries:
 
