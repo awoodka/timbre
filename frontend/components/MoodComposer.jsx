@@ -41,7 +41,9 @@ const MEDIA = ['book', 'film', 'show', 'anime', 'manga', 'game']
 export default function MoodComposer() {
   const { ratings, setResults } = useRatings()
   const [open, setOpen] = useState(false)
+  const [mode, setMode] = useState('simple')    // 'simple' | 'advanced'
   const [picks, setPicks] = useState({})        // { emotion_key: 1 (seek) | -1 (avoid) }
+  const [selectedPreset, setSelectedPreset] = useState(null)
   const [ending, setEnding] = useState('any')
   const [medium, setMedium] = useState('any')
   const [alpha, setAlpha] = useState(0.6)
@@ -54,32 +56,41 @@ export default function MoodComposer() {
   const isDirty = Object.keys(picks).length > 0 || ending !== 'any' || medium !== 'any'
 
   // neutral → seek → avoid → neutral
-  const cycle = (key) => setPicks((p) => {
-    const cur = p[key] || 0
-    const next = { ...p }
-    if (cur === 0) next[key] = 1
-    else if (cur === 1) next[key] = -1
-    else delete next[key]
-    return next
-  })
+  const cycle = (key) => {
+    setSelectedPreset(null)
+    setPicks((p) => {
+      const cur = p[key] || 0
+      const next = { ...p }
+      if (cur === 0) next[key] = 1
+      else if (cur === 1) next[key] = -1
+      else delete next[key]
+      return next
+    })
+  }
 
   const applyPreset = (preset) => {
     const next = {}
     preset.seek.forEach((k) => { next[k] = 1 })
     preset.avoid.forEach((k) => { next[k] = -1 })
     setPicks(next)
+    setSelectedPreset(preset.name)
     if ([...preset.seek, ...preset.avoid].some((k) => MORE.includes(k))) setShowMore(true)
   }
 
-  const clear = () => { setPicks({}); setEnding('any'); setMedium('any') }
+  const clear = () => { setPicks({}); setEnding('any'); setMedium('any'); setSelectedPreset(null) }
 
   const search = async () => {
     if (!canSearch) return
     setLoading(true)
     setError(null)
     try {
+      const advanced = mode === 'advanced'
       const res = await api.recommendExperience({
-        mood: picks, ending, alpha, limit: 12, medium: medium === 'any' ? null : medium,
+        mood: picks,
+        ending,
+        alpha: advanced ? alpha : 0.6,
+        medium: advanced && medium !== 'any' ? medium : null,
+        limit: 12,
       })
       setResults(res.recommendations || [])
     } catch (e) {
@@ -118,14 +129,30 @@ export default function MoodComposer() {
 
       {open && (
         <div className="mc-body">
-          <div className="mc-presets">
-            {PRESETS.map((p) => (
-              <button key={p.name} type="button" className="mc-preset" onClick={() => applyPreset(p)}>
-                {p.name}
-              </button>
-            ))}
+          <div className="mc-modes">
+            <div className="view-toggle">
+              <button type="button" className={mode === 'simple' ? 'on' : ''} onClick={() => setMode('simple')}>Simple</button>
+              <button type="button" className={mode === 'advanced' ? 'on' : ''} onClick={() => setMode('advanced')}>Advanced</button>
+            </div>
           </div>
 
+          <div className="mc-section">
+            {mode === 'simple' && <div className="mc-label">Pick a vibe</div>}
+            <div className="mc-presets">
+              {PRESETS.map((p) => (
+                <button
+                  key={p.name}
+                  type="button"
+                  className={`mc-preset${selectedPreset === p.name ? ' on' : ''}`}
+                  onClick={() => applyPreset(p)}
+                >
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {mode === 'advanced' && (
           <div className="mc-section">
             <div className="mc-label">
               Feelings <span className="mc-hint">tap to seek, tap again to avoid</span>
@@ -140,6 +167,7 @@ export default function MoodComposer() {
               </button>
             )}
           </div>
+          )}
 
           <div className="mc-section">
             <div className="mc-label">How it lands</div>
@@ -157,6 +185,7 @@ export default function MoodComposer() {
             </div>
           </div>
 
+          {mode === 'advanced' && (
           <div className="mc-section">
             <div className="mc-label">Media type</div>
             <div className="mc-chips">
@@ -189,8 +218,9 @@ export default function MoodComposer() {
               })}
             </div>
           </div>
+          )}
 
-          {hasRatings && (
+          {mode === 'advanced' && hasRatings && (
             <div className="mc-section">
               <div className="mc-label">Balance</div>
               <input
