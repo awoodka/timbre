@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 import { useRatings } from '@/lib/ratings-context'
+import { useSaves } from '@/lib/saves-context'
 import RequireAuth from '@/components/RequireAuth'
 import RecRow from '@/components/RecRow'
 import ShelfCard from '@/components/ShelfCard'
@@ -14,6 +15,7 @@ const MIN_LOGGED = 4
 
 function Recommendations() {
   const { ratings, results } = useRatings()
+  const { saved } = useSaves()
   const [mediaById, setMediaById] = useState({})
   const [mediaLoaded, setMediaLoaded] = useState(false)
 
@@ -29,6 +31,11 @@ function Recommendations() {
   const rows = useMemo(
     () => (mediaLoaded ? buildRows({ ratings, mediaById }) : []),
     [ratings, mediaById, mediaLoaded]
+  )
+  // Saved works (newest-first), resolved against the loaded corpus — the "On your list" shelf.
+  const savedItems = useMemo(
+    () => saved.map((id) => mediaById[id]).filter(Boolean),
+    [saved, mediaById]
   )
 
   return (
@@ -55,6 +62,18 @@ function Recommendations() {
           </div>
           <div className="shelf-scroll">
             {results.map((r) => <ShelfCard key={r.item.id} item={r.item} reasons={r.reasons} />)}
+          </div>
+        </section>
+      )}
+
+      {savedItems.length > 0 && (
+        <section className="rec-row" aria-label="On your list">
+          <div className="rec-row-head">
+            <h2>On your list</h2>
+            <span className="rec-row-sub">Saved to experience later</span>
+          </div>
+          <div className="shelf-scroll">
+            {savedItems.map((item) => <ShelfCard key={item.id} item={item} />)}
           </div>
         </section>
       )}

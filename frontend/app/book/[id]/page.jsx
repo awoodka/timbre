@@ -7,6 +7,7 @@ import { api } from '@/lib/api'
 import BookCover from '@/components/BookCover'
 import EmotionRadar from '@/components/EmotionRadar'
 import EmotionBar from '@/components/EmotionBar'
+import SaveButton from '@/components/SaveButton'
 
 export default function BookDetail() {
   const { id } = useParams()
@@ -51,6 +52,9 @@ export default function BookDetail() {
               {book.metadata.genre && <span> &middot; {book.metadata.genre.join(', ')}</span>}
             </div>
           )}
+          <div className="detail-actions">
+            <SaveButton mediaId={book.id} label />
+          </div>
         </div>
       </div>
 

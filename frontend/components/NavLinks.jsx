@@ -41,6 +41,7 @@ export default function NavLinks() {
   return (
     <div className="nav-links">
       <Link href="/recommendations">For You</Link>
+      <Link href="/watchlist">My List</Link>
       <Link href="/ratings">My Ratings</Link>
       <Link href="/catalogue">Catalogue</Link>
       <Link href="/explore">Explore</Link>

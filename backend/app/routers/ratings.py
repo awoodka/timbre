@@ -1,13 +1,13 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
 from app.database import get_db
 from app.models.media import MediaItem
-from app.models.user import Rating, User
+from app.models.user import Rating, SavedItem, User
 from app.schemas import RatingResponse, RatingUpsert
 from app.services.feedback import compute_resonance
 
@@ -44,6 +44,10 @@ async def upsert_rating(
             user_id=user.id, media_id=media_id, feedback=data.feedback, resonance=resonance
         )
         db.add(existing)
+    # Rating a work means you've experienced it → drop it from the watchlist.
+    await db.execute(
+        delete(SavedItem).where(SavedItem.user_id == user.id, SavedItem.media_id == media_id)
+    )
     await db.commit()
     await db.refresh(existing)
     return existing

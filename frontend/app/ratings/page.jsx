@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '@/lib/api'
 import { useRatings } from '@/lib/ratings-context'
+import { useSaves } from '@/lib/saves-context'
 import RequireAuth from '@/components/RequireAuth'
 import BookSearch from '@/components/BookSearch'
 import RatingItem from '@/components/RatingItem'
@@ -19,6 +20,7 @@ const BAND_LABEL = { loved: 'Loved', liked: 'Liked', neutral: 'Neutral', 'not-fo
 
 function RatingsManager() {
   const { ratings, rate, removeRating } = useRatings()
+  const { removeSave } = useSaves()
   const [books, setBooks] = useState([])
   const [booksLoading, setBooksLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -90,7 +92,7 @@ function RatingsManager() {
         <p>Everything you’ve logged — search, filter, and tune how each work landed.</p>
       </div>
 
-      <BookSearch books={available} onSelect={(id, fb) => rate(id, fb)} />
+      <BookSearch books={available} onSelect={(id, fb) => { rate(id, fb); removeSave(id) }} />
 
       {ratings.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>

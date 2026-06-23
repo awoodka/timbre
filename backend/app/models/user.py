@@ -32,6 +32,9 @@ class User(Base):
     ratings: Mapped[list["Rating"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
+    saved_items: Mapped[list["SavedItem"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class Rating(Base):
@@ -64,3 +67,26 @@ class Rating(Base):
     )
 
     user: Mapped["User"] = relationship(back_populates="ratings")
+
+
+class SavedItem(Base):
+    """A media item a user saved to experience later ("My List"). One per
+    (user, media); auto-removed once the user rates the item."""
+
+    __tablename__ = "saved_items"
+    __table_args__ = (UniqueConstraint("user_id", "media_id", name="uq_user_saved_media"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    media_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("media.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+
+    user: Mapped["User"] = relationship(back_populates="saved_items")

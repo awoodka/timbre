@@ -45,4 +45,9 @@ export const api = {
   putRating: (media_id, feedback) =>
     request(`/ratings/${media_id}`, { method: 'PUT', body: JSON.stringify({ feedback }) }),
   deleteRating: (media_id) => request(`/ratings/${media_id}`, { method: 'DELETE' }),
+
+  // ---- watchlist / saved-for-later ----
+  getSaves: () => request('/saves'),
+  postSave: (media_id) => request(`/saves/${media_id}`, { method: 'POST' }),
+  deleteSave: (media_id) => request(`/saves/${media_id}`, { method: 'DELETE' }),
 }

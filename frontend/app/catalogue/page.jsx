@@ -6,6 +6,7 @@ import { api } from '@/lib/api'
 import BookCover from '@/components/BookCover'
 import { getEmotionColor } from '@/components/emotionColors'
 import { getMediaType } from '@/components/mediaType'
+import SaveButton from '@/components/SaveButton'
 
 const MOOD_THRESHOLD = 0.5
 
@@ -243,6 +244,7 @@ export default function Catalogue() {
                 className="book-card"
                 style={{ borderLeft: `4px solid ${t.color}` }}
               >
+                <SaveButton mediaId={item.id} className="card-save" />
                 <BookCover url={item.cover_image_url} />
                 <div className="book-card-info">
                   <div className="card-top">

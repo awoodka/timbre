@@ -19,7 +19,9 @@
 
 ---
 
-## 📍 Where I left off  *(last updated: 2026-06-16)*
+## 📍 Where I left off  *(last updated: 2026-06-23)*
+
+**Most recent (2026-06-23):** Three product pushes since the homepage/explore work, **all now committed** (`3ca0dce`, `da282f5`): (1) **ratings redesigned** from a single star to **per-emotion 5-point feedback** (−2…+2 over a work's top felt emotions) → a learned **taste profile** + a derived **resonance** score (model + migration `migrate_ratings_feedback.py`). (2) **Experience search** — an ungated second mode on `POST /api/recommend`: compose feelings to **seek/avoid** + an **ending tone** + a **mood↔taste α dial** + an optional **media-type filter**, blended and ranked cross-media (`services/mood.py`, `components/MoodComposer.jsx`). (3) **Split `/discover`** into **`/ratings`** (filterable library + grid⇄list toggle + logging) and **`/recommendations`** ("For You" — Netflix-style Smart-mix shelves: top picks + because-you-loved-X + mood + arc + cross-media); `/discover` now redirects there. Backend gained an optional `medium` filter on `/recommend`. **Next:** a **browser pass** over the three rec tiers + the grid⇄list toggle; then pick the next feature off the **User-facing feature backlog** (Ideas in the pot) — **one at a time**. (Note: the older "State / next steps" blocks below predate the 300-item corpus and the account-gating decision — see Decisions §7–§9 and the session log for current truth.)
 
 **Most recent (2026-06-16):** This session — (1) a **professional landing page** at `/` (hero + one-line tagline + a **full-bleed scrolling cover band** randomized across all 6 media + "How it works" + a **mood explorer**), with the rate→recommend tool moved to **`/discover`**; (2) **auth gating decided** (supersedes the §7 deferral) — rating + recommendations now **require an account**; logged-out users get only Home + Catalogue + browsing; login/signup → `/discover`; signed-in users can still open the home page via the logo (no forced redirect). (3) a new **public `/explore` page** — interactive **3D UMAP projection** of all 300 works (Plotly `scatter3d`), colorable by medium / dominant emotion / any dimension, with hover + click-through. Also re-verified per-account rating persistence end-to-end (9/9). See Decisions §8–§9. **(1)+(2) committed as `911dbfc`; `/explore` uncommitted.**
 
@@ -222,6 +224,27 @@
 - **Personal emotional taste profiles.** Aggregate a user's rating history into an average fingerprint — both for better recs and as a "this is your emotional taste" visualization.
 - **Cross-media (the endgame).** Books are just medium #1. The dimensions are media-agnostic on purpose. Validate they hold up across games/film/manga/music before committing to the cross-media promise.
 
+### User-facing feature backlog — pick off one at a time  *(2026-06-23, from a "what would a user want next" pass)*
+Prioritized, reuse-heavy first. The plan is to build these **one at a time**, in roughly this order.
+
+**Tier 1 — ship next (low/med effort, completes the core rate→discover→save→revisit loop):**
+- **"Want to experience" list (watchlist).** ✅ **Shipped 2026-06-23** (`/watchlist` "My List" + a save bookmark on For You / catalogue / detail + auto-remove on rate + an "On your list" shelf on For You). Save-for-later — the most-missed everyday gap; you find something in For You but want to consume it later. New lightweight per-user saves list (same shape as `ratings`) + a save affordance on `ShelfCard`/detail + a `/list` page. Pairs naturally with "seen it."
+- **Rate from anywhere (detail page + cards).** Rating is currently buried behind the `/ratings` search box, but the moments you most want to rate are while *looking at a work*. Drop `EmotionFeedback` onto `/book/[id]` and a quick-rate on cards (reuse `rate()`). Biggest friction-remover — ratings fuel the whole engine, so this compounds everywhere.
+- **"Your emotional fingerprint" insights page.** The delightful one — visualize the user's *own* taste: a radar of emotions they gravitate to vs. avoid, resonance distribution, split across the 6 media, a one-line read ("you lean melancholy + wonder; you avoid frenetic chaos"). Realizes the **"Personal emotional taste profiles"** idea above; `build_taste_profile` already computes the raw numbers → this is mostly visualization, and it's the most shareable artifact in the app.
+
+**Tier 2 — distinctive / a bit more work:**
+- **Natural-language search.** "Something that feels like the loneliness of *Blade Runner* but ends hopeful" → an LLM parses the sentence into a mood/ending vector → feeds the existing experience engine. The *magic* version of MoodComposer; leans on the LLM core. (Same intent as **"Natural-language emotional queries"** above, but it no longer needs dual embeddings — the mood-vector path already exists.)
+- **Add a work that isn't in the catalogue.** On-demand analysis so users aren't capped at the 300-item seed (`createItem` + `reanalyze` already exist). Needed for real-world use.
+- **Recommendation feedback — "not for me" / "seen it" / dismiss.** Refines the feed and stops re-surfacing things. Cheap, and it makes For You feel alive.
+
+**Polish:**
+- Constraint filters (runtime/length "I have 90 min", year, where-to-find links — `metadata_` already carries year/genre); an **intensity heads-up** (we score dread/tension/ending_valence → warn on devastating endings); **contextual preset rows** ("rainy Sunday", "late night" — nearly free, just more presets); **dark mode** (unify with the already-dark `/explore`).
+
+**Bigger swings (later):**
+- **Compare taste with a friend** / a shareable emotional-fingerprint card (novel for a *cross-media* taste graph; needs real multi-user infra). **"Surprise me" — one decisive pick** (mood + a time budget → a single answer, not a wall of shelves) for decision-paralysis nights.
+
+**Deliberately skipping for now:** streaks/badges/gamification (noise that distracts from the emotional-curation feel); a full social graph (premature until single-player is sticky).
+
 ### Cross-media implementation roadmap  *(agreed 2026-06-02)*
 Implement each medium independently, **least → most difficult** (difficulty driven by: clean metadata API? self-contained unit? narrative-arc fit? experience variance?):
 1. **Film** — TMDB; clean unit, perfect arc fit. FIRST.
@@ -287,13 +310,20 @@ Decision §6 starts with the shared felt core only (aesthetics feed the LLM scor
 
 ### 2026-06-23
 - **Goal:** split the overloaded `/discover` into two focused pages — a filterable ratings library and a Netflix-style recommendations page.
-- **Did (recommendations):** new `/recommendations` ("For You") — horizontal "Smart mix" shelves: Top picks (taste, ≥4 ratings), "Because you loved X" (item-similar, ≥1), 4 mood rows + 2 arc rows (ungated experience search, so the page is populated even at 0 ratings), and a cross-media "Beyond books" row (≥4). Each `RecRow` fetches independently with skeletons and hides itself if empty. Cold-start hero + a "rate N more" gate strip below 4 ratings. MoodComposer moved here as "compose your own" → its results render as a "From your search" shelf.
+- **Did (recommendations):** new `/recommendations` ("For You") — horizontal "Smart mix" shelves: Top picks (taste, ≥4 ratings), "Because you loved X" (item-similar, ≥1), 4 mood rows + 2 arc rows (ungated experience search, so the page is populated even at 0 ratings), and a cross-media "Beyond books" row (≥4). Each `RecRow` fetches independently with skeletons and hides itself if empty. Cold-start hero + a "rate N more" gate strip below 4 ratings. MoodComposer moved here as "compose your own" → its results render as a "From your search" shelf. Then added a **media-type selector** to that search (Any + the 6 media as pills; `MoodComposer` forwards `medium` to `recommendExperience`), so a composed search can be restricted to one medium — verified `medium:"anime"` → all-anime results.
 - **Did (ratings):** new `/ratings` ("My Ratings") — joins context ratings with media; filter by search / medium / mood (breakdown ≥0.5) / resonance-band; sort recent/resonance/title; **grid⇄list view toggle** (localStorage-persisted); logging (BookSearch) moved here; edit/remove inline in both layouts. Extracted `BookSearch` + `FeedbackSummary` into shared components; added `ShelfCard`/`RecRow`/`RatingItem`.
 - **Did (backend):** one new param — optional `medium` on `RecommendRequest` + an `AND medium=:medium` clause in `_rank` — powers per-medium taste rows. Curl-verified (film/book/none/bogus → no 500).
 - **Did (nav/routing):** NavLinks → "For You" + "My Ratings" (replacing Discover); home CTAs + login redirect → the new routes; `/discover` is now a client redirect stub to `/recommendations`.
 - **Decided:** Smart-mix partition (taste + loved + mood + arc + medium), not raw per-emotion rows; rec rows fetched as **parallel client calls** with per-row skeletons (no batched endpoint for MVP); ratings page gets a user-chosen grid⇄list toggle.
 - **Concerns / open questions:** ~6–10 independent rec calls per page load — fine at 300 items; revisit with a batched `/recommend/rows` endpoint if the corpus grows. Tiers verified via route-compile (200) + endpoint validation + clean diagnostics, not yet a full browser pass.
-- **Left off at:** **uncommitted on `main`** (stacked on the prior experience-search + ratings-redesign work, commit `3ca0dce`). Next: browser pass over the three rec tiers + the grid⇄list toggle; then commit. Pre-deploy reminders still stand (real `SECRET_KEY`, `Secure` cookies).
+- **Left off at:** **committed** — `3ca0dce` (ratings redesign + experience search) then `da282f5` (the page split + the media-type selector). Next: a **browser pass** over the three rec tiers + the grid⇄list toggle, then pick the next feature off the **User-facing feature backlog** (Ideas in the pot) one at a time. Pre-deploy reminders still stand (real `SECRET_KEY`, `Secure` cookies, `npm audit`).
+
+### 2026-06-23 — Watchlist ("My List")
+- **Goal:** ship the first item off the user-facing backlog — a save-for-later list.
+- **Did:** new `SavedItem` model (`saved_items`, **auto-created** by `create_all` — no migration) + `app/routers/saves.py` (GET / idempotent POST / DELETE); **rating a work auto-removes it** from the list (a `delete(SavedItem)` in the ratings PUT handler). Frontend: `lib/saves-context.jsx` (`SavesProvider`/`useSaves`, mirrors ratings-context) + `components/SaveButton.jsx` bookmark toggle on **For You cards, catalogue cards, and the detail page** (stops the card `<Link>` from navigating; logged-out → `/login`); a new **`/watchlist` ("My List")** page + a "My List" nav link; and an **"On your list"** shelf on `/recommendations` (shown only when you have saves).
+- **Decided (with Alex):** own page + nav link (not a tab on My Ratings); auto-remove on rate, done server-side; save button everywhere you see a work.
+- **Verified:** backend curl e2e (save → list → idempotent re-save → **rate auto-removes** → delete → bogus 404 → unauth 401); diagnostics clean on all new/changed files; `/watchlist` + affected routes compile (200).
+- **Left off at:** committed as `watchlist`. Backlog #1 done — 5 remain (rate-from-anywhere, fingerprint page, NL search, add-a-work, rec feedback). Pre-deploy reminders stand (real `SECRET_KEY`, `Secure` cookies, `npm audit`).
 
 <!--
 Template for future entries:

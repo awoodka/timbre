@@ -4,6 +4,7 @@ import Link from 'next/link'
 import BookCover from '@/components/BookCover'
 import { getMediaType } from '@/components/mediaType'
 import { getEmotionColor } from '@/components/emotionColors'
+import SaveButton from '@/components/SaveButton'
 
 const fmt = (s) => s.replace(/_/g, ' ')
 
@@ -14,7 +15,10 @@ export default function ShelfCard({ item, reasons, badge }) {
   const t = getMediaType(item.medium)
   return (
     <Link href={`/book/${item.id}`} className="shelf-card" style={{ borderLeftColor: t.color }}>
-      <BookCover url={item.cover_image_url} size="large" />
+      <span className="shelf-card-cover">
+        <BookCover url={item.cover_image_url} size="large" />
+        <SaveButton mediaId={item.id} className="card-save" />
+      </span>
       <div className="shelf-card-title">{item.title}</div>
       <div className="shelf-card-author">{item.creator}</div>
       {badge && <span className="shelf-card-badge">{badge}</span>}

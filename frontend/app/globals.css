@@ -1948,3 +1948,37 @@ button:disabled {
 .ri-controls { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
 .rating-card .ri-controls { margin-top: 0.5rem; }
 .logged-head .ri-controls { margin-left: auto; }
+
+/* Save / watchlist toggle (bookmark) + the My List grid */
+.save-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.save-btn:hover { color: var(--accent); border-color: var(--accent); background: #fff; }
+.save-btn.saved { color: var(--accent); border-color: var(--accent); }
+.save-btn.labeled {
+  width: auto;
+  height: auto;
+  border-radius: 8px;
+  padding: 0.45rem 0.85rem;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  background: var(--surface);
+}
+.save-btn.labeled.saved { background: var(--accent-light); }
+.card-save { position: absolute; top: 8px; right: 8px; z-index: 2; }
+.shelf-card-cover { position: relative; display: block; }
+.book-card { position: relative; }
+.detail-actions { margin-top: 1rem; }
+.shelf-grid { display: flex; flex-wrap: wrap; gap: 1rem; }

@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import init_db
 import app.models.user  # noqa: F401  -- register User/Rating tables with Base.metadata
-from app.routers import media, recommend, dimensions, auth, ratings, projection
+from app.routers import media, recommend, dimensions, auth, ratings, saves, projection
 
 logging.basicConfig(level=logging.INFO)
 
@@ -37,6 +37,7 @@ app.include_router(recommend.router)
 app.include_router(dimensions.router)
 app.include_router(auth.router)
 app.include_router(ratings.router)
+app.include_router(saves.router)
 app.include_router(projection.router)
 
 

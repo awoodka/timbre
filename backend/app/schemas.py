@@ -151,3 +151,9 @@ class RatingResponse(BaseModel):
     resonance: float
 
     model_config = {"from_attributes": True}
+
+
+class SavedItemResponse(BaseModel):
+    media_id: UUID
+
+    model_config = {"from_attributes": True}
