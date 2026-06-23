@@ -8,14 +8,23 @@ import BookCover from '@/components/BookCover'
 import EmotionRadar from '@/components/EmotionRadar'
 import EmotionBar from '@/components/EmotionBar'
 import SaveButton from '@/components/SaveButton'
+import EmotionFeedback from '@/components/EmotionFeedback'
+import { useAuth } from '@/lib/auth-context'
+import { useRatings } from '@/lib/ratings-context'
+import { useSaves } from '@/lib/saves-context'
+import { topFeltEmotions } from '@/lib/emotions'
 
 export default function BookDetail() {
   const { id } = useParams()
   const router = useRouter()
+  const { user } = useAuth()
+  const { ratings, rate, removeRating } = useRatings()
+  const { isSaved, removeSave } = useSaves()
   const [book, setBook] = useState(null)
   const [similar, setSimilar] = useState([])
   const [loading, setLoading] = useState(true)
   const [showBars, setShowBars] = useState(false)
+  const [rateOpen, setRateOpen] = useState(false)
 
   useEffect(() => {
     setLoading(true)
@@ -30,6 +39,10 @@ export default function BookDetail() {
 
   if (loading) return <div className="loading"><span className="spinner" /> Loading...</div>
   if (!book) return <div className="loading">Book not found</div>
+
+  const myRating = ratings.find((r) => r.media_id === book.id)
+  const emotions = topFeltEmotions(book.emotion_breakdown)
+  const onRate = (fb) => { rate(book.id, fb); if (isSaved(book.id)) removeSave(book.id) }
 
   return (
     <div className="book-detail">
@@ -54,9 +67,41 @@ export default function BookDetail() {
           )}
           <div className="detail-actions">
             <SaveButton mediaId={book.id} label />
+            <button
+              type="button"
+              className={`rate-toggle${myRating ? ' rated' : ''}`}
+              onClick={() => { if (!user) { router.push('/login'); return } setRateOpen((o) => !o) }}
+              aria-expanded={rateOpen}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+                <circle cx="8" cy="8" r="6" />
+                <path d="M5.4 9.4a3.2 3.2 0 0 0 5.2 0" />
+                <circle cx="6" cy="6.6" r="0.55" fill="currentColor" stroke="none" />
+                <circle cx="10" cy="6.6" r="0.55" fill="currentColor" stroke="none" />
+              </svg>
+              {myRating ? 'Edit rating' : 'Rate'}
+            </button>
           </div>
         </div>
       </div>
+
+      {rateOpen && user && (
+        <div className="detail-rating">
+          <h2 className="section-title">How did it make you feel?</h2>
+          {emotions.length > 0 ? (
+            <>
+              <EmotionFeedback emotions={emotions} value={myRating?.feedback || {}} onChange={onRate} />
+              {myRating && (
+                <button type="button" className="mc-clear" onClick={() => removeRating(book.id)} style={{ marginTop: '0.5rem' }}>
+                  Remove rating
+                </button>
+              )}
+            </>
+          ) : (
+            <p style={{ color: 'var(--text-muted)' }}>Not analyzed yet — nothing to rate.</p>
+          )}
+        </div>
+      )}
 
       {book.description && (
         <>

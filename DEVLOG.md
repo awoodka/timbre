@@ -229,7 +229,7 @@ Prioritized, reuse-heavy first. The plan is to build these **one at a time**, in
 
 **Tier 1 — ship next (low/med effort, completes the core rate→discover→save→revisit loop):**
 - **"Want to experience" list (watchlist).** ✅ **Shipped 2026-06-23** (`/watchlist` "My List" + a save bookmark on For You / catalogue / detail + auto-remove on rate + an "On your list" shelf on For You). Save-for-later — the most-missed everyday gap; you find something in For You but want to consume it later. New lightweight per-user saves list (same shape as `ratings`) + a save affordance on `ShelfCard`/detail + a `/list` page. Pairs naturally with "seen it."
-- **Rate from anywhere (detail page + cards).** Rating is currently buried behind the `/ratings` search box, but the moments you most want to rate are while *looking at a work*. Drop `EmotionFeedback` onto `/book/[id]` and a quick-rate on cards (reuse `rate()`). Biggest friction-remover — ratings fuel the whole engine, so this compounds everywhere.
+- **Rate from anywhere (detail page).** ✅ **Shipped 2026-06-23** — a "Rate" button under Save on `/book/[id]` opens the per-emotion form (reuses `EmotionFeedback`/`rate()`; no backend). Per Alex, rating is a deliberate *click-into-the-work* action, so cards keep only the save bookmark (no per-card rate button). Was the biggest friction-remover — ratings fuel the whole engine.
 - **"Your emotional fingerprint" insights page.** The delightful one — visualize the user's *own* taste: a radar of emotions they gravitate to vs. avoid, resonance distribution, split across the 6 media, a one-line read ("you lean melancholy + wonder; you avoid frenetic chaos"). Realizes the **"Personal emotional taste profiles"** idea above; `build_taste_profile` already computes the raw numbers → this is mostly visualization, and it's the most shareable artifact in the app.
 
 **Tier 2 — distinctive / a bit more work:**
@@ -324,6 +324,13 @@ Decision §6 starts with the shared felt core only (aesthetics feed the LLM scor
 - **Decided (with Alex):** own page + nav link (not a tab on My Ratings); auto-remove on rate, done server-side; save button everywhere you see a work.
 - **Verified:** backend curl e2e (save → list → idempotent re-save → **rate auto-removes** → delete → bogus 404 → unauth 401); diagnostics clean on all new/changed files; `/watchlist` + affected routes compile (200).
 - **Left off at:** committed as `watchlist`. Backlog #1 done — 5 remain (rate-from-anywhere, fingerprint page, NL search, add-a-work, rec feedback). Pre-deploy reminders stand (real `SECRET_KEY`, `Secure` cookies, `npm audit`).
+
+### 2026-06-23 — Rate from a work's detail page (backlog #2)
+- **Goal:** make rating reachable while looking at a work, not only the `/ratings` search.
+- **Did:** `/book/[id]` now has a **"Rate" button stacked under Save** that toggles open the **"How did it make you feel?"** per-emotion form (the existing `EmotionFeedback`, seeded with current marks, with Remove); logged-out → `/login`; rating still auto-removes the work from the watchlist. Reuses `EmotionFeedback`/`topFeltEmotions`/`useRatings().rate` — **no backend change**.
+- **Decided (with Alex):** rating is a deliberate *click-into-the-work* action — I built a per-card rate popup (`RateModal`/`RateButton`) first, then removed it at Alex's request; cards keep only the save bookmark, and the rate control lives only on the detail page.
+- **Verified:** diagnostics clean; `/book/[id]` + affected routes compile (200). (rate() → PUT `/api/ratings` already proven.)
+- **Left off at:** committed as `rating updates`. Backlog #2 done — 4 remain (fingerprint page, NL search, add-a-work, rec feedback).
 
 <!--
 Template for future entries:
