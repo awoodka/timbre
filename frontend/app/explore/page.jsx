@@ -6,6 +6,7 @@ import { api } from '@/lib/api'
 import { getMediaType, MEDIA_TYPES } from '@/components/mediaType'
 import { getEmotionColor } from '@/components/emotionColors'
 import { useRatings } from '@/lib/ratings-context'
+import { buildTasteProfile, tasteAxes, archetype } from '@/lib/taste'
 import ExploreSidePanel from '@/components/ExploreSidePanel'
 
 // Plotly is client-only; load it lazily so SSR doesn't touch `window`.
@@ -75,6 +76,11 @@ const COLOR_MODES = [
 ]
 const MEDIA_KEYS = Object.keys(MEDIA_TYPES)
 
+// "You are here" marker palette — a warm rose, distinct from the gold favorites.
+const YOU_GLOW = '#e6917a'
+const YOU_CORE = '#ffd9c2'
+const YOU_TEXT = '#f4c9b3'
+
 function axisRawValue(bd, spec) {
   if (!bd) return 0
   if (spec.type === 'emotion') return bd[spec.key] ?? 0
@@ -143,6 +149,7 @@ export default function Explore() {
   const [showRegions, setShowRegions] = useState(true)
   const [showLandmarks, setShowLandmarks] = useState(true)
   const [showClouds, setShowClouds] = useState(true)
+  const [showYou, setShowYou] = useState(true)
   const [mediaSel, setMediaSel] = useState(MEDIA_KEYS)
   const [selected, setSelected] = useState(null) // a point
 
@@ -213,6 +220,27 @@ export default function Explore() {
     const byTitle = new Map(visible.map((p) => [p.title, p]))
     return { items: LANDMARKS.map((t) => byTitle.get(t)).filter(Boolean), personalized: false }
   }, [visible, ratings])
+
+  // Your fingerprint archetype (depends only on your ratings, not the axes).
+  const persona = useMemo(
+    () => (ratings.length ? archetype(tasteAxes(buildTasteProfile(ratings.map((r) => r.feedback)))) : null),
+    [ratings]
+  )
+
+  // "You are here" — the resonance-weighted center of your rated works, in the same
+  // coordinate frame as the points (so it tracks whichever axes are selected).
+  const you = useMemo(() => {
+    if (!ratings.length || !points.length) return null
+    const byId = new Map(points.map((p) => [p.id, p]))
+    let wx = 0, wy = 0, wz = 0, wsum = 0, n = 0
+    for (const r of ratings) {
+      const p = byId.get(r.media_id)
+      if (!p) continue
+      const w = Math.max(0.1, r.resonance ?? 0.5) // loved works pull hardest
+      wx += p.x * w; wy += p.y * w; wz += p.z * w; wsum += w; n++
+    }
+    return n ? { x: wx / wsum, y: wy / wsum, z: wz / wsum, n } : null
+  }, [ratings, points])
 
   // Soft colour clouds — only for colour groups that actually CONCENTRATE in space
   // (an "obvious grouping"), so By-medium (media are interspersed) stays clean while
@@ -291,8 +319,22 @@ export default function Explore() {
         marker: { size: personal ? 4.5 : 3, color: personal ? '#e3c66a' : '#e8dccb' },
         hoverinfo: 'skip', showlegend: false })
     }
+    if (showYou && you) {
+      const base = { x: [you.x], y: [you.y], z: [you.z] }
+      // A layered beacon: soft glow → halo → bright core, with the archetype as a label.
+      out.push({ type: 'scatter3d', mode: 'markers', ...base,
+        marker: { size: 32, color: YOU_GLOW, opacity: 0.15 }, hoverinfo: 'skip', showlegend: false })
+      out.push({ type: 'scatter3d', mode: 'markers', ...base,
+        marker: { size: 16, color: YOU_GLOW, opacity: 0.5 }, hoverinfo: 'skip', showlegend: false })
+      out.push({ type: 'scatter3d', mode: 'markers+text', ...base,
+        text: [`✦ You${persona ? `<br>${persona.name}` : ''}`], textposition: 'top center',
+        textfont: { size: 12, color: YOU_TEXT },
+        marker: { size: 7, color: YOU_CORE },
+        hovertemplate: `<b>✦ Your taste</b>${persona ? `<br>${persona.name} — ${persona.blurb}` : ''}<extra></extra>`,
+        showlegend: false })
+    }
     return out
-  }, [visible, colorMode, dimension, regions, landmarks, showRegions, showLandmarks, cloudTraces])
+  }, [visible, colorMode, dimension, regions, landmarks, showRegions, showLandmarks, cloudTraces, you, persona, showYou])
 
   const layout = useMemo(() => ({
     autosize: true,
@@ -404,6 +446,7 @@ export default function Explore() {
           <label className="explore-toggle"><input type="checkbox" checked={showClouds} onChange={(e) => setShowClouds(e.target.checked)} /> Clouds</label>
           <label className="explore-toggle"><input type="checkbox" checked={showRegions} onChange={(e) => setShowRegions(e.target.checked)} /> Regions</label>
           <label className="explore-toggle"><input type="checkbox" checked={showLandmarks} onChange={(e) => setShowLandmarks(e.target.checked)} /> {landmarks.personalized ? 'Favorites' : 'Landmarks'}</label>
+          {you && <label className="explore-toggle"><input type="checkbox" checked={showYou} onChange={(e) => setShowYou(e.target.checked)} /> You</label>}
         </div>
       </div>
 
@@ -430,7 +473,9 @@ export default function Explore() {
 
       {/* Caption (bottom-right) */}
       <div className="xp-panel xp-caption">
-        <strong>{visible.length} works.</strong> Nearby points feel similar. Drag to rotate, scroll to zoom, hover for details, click to preview.
+        <strong>{visible.length} works.</strong> Nearby points feel similar.{' '}
+        {you && showYou && <span style={{ color: YOU_TEXT }}>✦ marks the heart of your taste. </span>}
+        Drag to rotate, scroll to zoom, hover for details, click to preview.
       </div>
 
       <ExploreSidePanel point={selected} neighbors={selectedNeighbors} onClose={() => setSelected(null)} />
