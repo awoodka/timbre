@@ -83,6 +83,10 @@ class RecommendRequest(BaseModel):
     alpha: float = Field(default=0.6, ge=0.0, le=1.0)  # 1.0 = all mood, 0.0 = all taste
     # Optional medium filter (book/film/show/anime/manga/game) — powers per-medium rows.
     medium: str | None = None
+    # Natural-language search: a free-text description of the desired experience.
+    # When present, it is parsed (Gemini) into mood/ending/medium server-side and
+    # takes precedence over any explicit mood/ending/medium in the body.
+    description: str | None = Field(default=None, max_length=500)
 
     @field_validator("mood")
     @classmethod

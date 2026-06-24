@@ -38,9 +38,8 @@ const ENDINGS = [
 
 const MEDIA = ['book', 'film', 'show', 'anime', 'manga', 'game']
 
-export default function MoodComposer() {
+export default function MoodComposer({ open = false }) {
   const { ratings, setResults } = useRatings()
-  const [open, setOpen] = useState(false)
   const [mode, setMode] = useState('simple')    // 'simple' | 'advanced'
   const [picks, setPicks] = useState({})        // { emotion_key: 1 (seek) | -1 (avoid) }
   const [selectedPreset, setSelectedPreset] = useState(null)
@@ -117,18 +116,10 @@ export default function MoodComposer() {
     )
   }
 
-  return (
-    <div className="mood-composer">
-      <button type="button" className="mc-toggle" onClick={() => setOpen((o) => !o)}>
-        <span className="mc-toggle-text">
-          <span className="mc-toggle-title">Find something specific</span>
-          <span className="mc-toggle-sub">Compose a mood &amp; an ending — works even before you’ve rated anything</span>
-        </span>
-        <span className={`mc-caret${open ? ' up' : ''}`} aria-hidden>▾</span>
-      </button>
+  if (!open) return null
 
-      {open && (
-        <div className="mc-body">
+  return (
+    <div className="find-panel">
           <div className="mc-modes">
             <div className="view-toggle">
               <button type="button" className={mode === 'simple' ? 'on' : ''} onClick={() => setMode('simple')}>Simple</button>
@@ -245,8 +236,6 @@ export default function MoodComposer() {
               <button type="button" className="mc-clear" onClick={clear}>Clear</button>
             )}
           </div>
-        </div>
-      )}
     </div>
   )
 }

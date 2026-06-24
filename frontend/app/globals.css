@@ -1660,35 +1660,33 @@ button:disabled {
 /* ============================================================
    Experience search — MoodComposer (/discover)
    ============================================================ */
-.mood-composer {
+/* Find controls — two compact pills that expand one panel inline (content-first). */
+.find-controls { margin-bottom: 1.5rem; }
+.find-pills { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.find-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.95rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.find-pill:hover { border-color: var(--accent); color: var(--accent); }
+.find-pill.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.find-pill-ic { font-size: 0.9em; }
+.find-panel {
+  margin-top: 0.75rem;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
-  margin-bottom: 1.5rem;
-  overflow: hidden;
+  padding: 1.15rem;
 }
-
-.mc-toggle {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.95rem 1.15rem;
-  background: transparent;
-  color: var(--text);
-  border: none;
-  border-radius: 0;
-  text-align: left;
-}
-.mc-toggle:hover { background: var(--surface-hover); }
-.mc-toggle-text { display: flex; flex-direction: column; gap: 0.15rem; }
-.mc-toggle-title { font-weight: 600; font-size: 0.98rem; }
-.mc-toggle-sub { font-size: 0.8rem; color: var(--text-muted); font-weight: 400; }
-.mc-caret { color: var(--text-muted); transition: transform 0.2s; flex-shrink: 0; }
-.mc-caret.up { transform: rotate(180deg); }
-
-.mc-body { padding: 0.25rem 1.15rem 1.15rem; border-top: 1px solid var(--border); }
 
 .mc-presets { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.9rem 0 0.3rem; }
 .mc-preset {
@@ -1796,6 +1794,29 @@ button:disabled {
   border: 1px solid var(--border);
   font-style: italic;
 }
+
+/* ============================================================
+   Natural-language search (/recommendations) — shares the
+   .mood-composer / .mc-toggle / .mc-body shell with the composer.
+   ============================================================ */
+.nl-search-bar { display: flex; gap: 0.5rem; align-items: stretch; }
+.nl-search-input { flex: 1; min-width: 0; }
+.nl-search-btn { white-space: nowrap; display: inline-flex; align-items: center; gap: 0.4rem; }
+.nl-examples { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.65rem; }
+.nl-example {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.nl-example:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
+.nl-example:disabled { opacity: 0.55; cursor: default; }
+.nl-search-msg { margin: 0.7rem 0 0; }
+.nl-search-empty { font-size: 0.85rem; color: var(--text-muted); }
 
 /* ============================================================
    Netflix-style recommendation shelves (/recommendations)

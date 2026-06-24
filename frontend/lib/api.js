@@ -28,6 +28,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ mood, ending, alpha, limit, ...(medium ? { medium } : {}) }),
     }),
+  // Natural-language search: a free-text description parsed (Gemini) into the same
+  // mood/ending/medium query server-side. One round-trip → ranked recs.
+  recommendNL: ({ description, limit = 12 } = {}) =>
+    request('/recommend', { method: 'POST', body: JSON.stringify({ description, limit }) }),
   getDimensions: () => request('/dimensions'),
   getProjection: (method = 'umap') => request(`/projection?method=${method}`),
 

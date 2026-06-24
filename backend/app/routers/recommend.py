@@ -17,12 +17,15 @@ from app.schemas import (
 )
 from app.services.feedback import build_taste_profile
 from app.services.mood import blend_vectors, build_mood_vector
+from app.services.query_parse import parse_query
 
 router = APIRouter(prefix="/api", tags=["recommendations"])
 
 # How many works a user must log before the PURE-TASTE recommender unlocks.
 # Experience search (a mood and/or a non-"any" ending) is NOT gated.
 MIN_LOGGED_WORKS = 4
+# Natural-language search leans mostly on the parsed query, lightly on saved taste.
+NL_ALPHA = 0.8
 # A liked/sought emotion is a "reason" for a rec if the work scores at least this raw.
 REASON_THRESHOLD = 0.5
 
@@ -69,7 +72,19 @@ async def recommend_media(
     ending via a soft penalty on each work's raw ending_valence.
     """
     rows = list(await db.scalars(select(Rating).where(Rating.user_id == user.id)))
-    is_experience = bool(req.mood) or req.ending != "any"
+
+    # Natural-language search: parse the free-text description into the same
+    # structured query the composer produces (feelings to seek/avoid, an ending,
+    # an optional medium), leaning toward the query over saved taste (NL_ALPHA).
+    mood, ending, medium, alpha = req.mood, req.ending, req.medium, req.alpha
+    if req.description:
+        parsed = await parse_query(req.description)
+        mood, ending, medium, alpha = parsed["mood"], parsed["ending"], parsed["medium"], NL_ALPHA
+        if not mood and ending == "any" and not medium:
+            # Couldn't read any feeling/intent from the text → honest empty result.
+            return RecommendResponse(logged=len(rows), needed=MIN_LOGGED_WORKS)
+
+    is_experience = bool(mood) or ending != "any" or bool(req.description)
 
     taste = build_taste_profile([r.feedback for r in rows]) if rows else np.zeros(NUM_DIMENSIONS)
 
@@ -85,9 +100,9 @@ async def recommend_media(
         liked = {DIMENSION_KEYS[i] for i, w in enumerate(query_vec) if w > 0}
     else:
         # ── Experience search (ungated) ──
-        mood_vec = build_mood_vector(req.mood or {})
-        query_vec = blend_vectors(mood_vec, taste, req.alpha)
-        if float(np.linalg.norm(query_vec)) == 0.0 and req.ending == "any":
+        mood_vec = build_mood_vector(mood or {})
+        query_vec = blend_vectors(mood_vec, taste, alpha)
+        if float(np.linalg.norm(query_vec)) == 0.0 and ending == "any":
             # No feelings picked and no taste yet → nothing to rank.
             return RecommendResponse(logged=len(rows), needed=MIN_LOGGED_WORKS)
         sought = {DIMENSION_KEYS[i] for i, w in enumerate(mood_vec) if w > 0}
@@ -96,7 +111,7 @@ async def recommend_media(
         liked = sought or {DIMENSION_KEYS[i] for i, w in enumerate(query_vec) if w > 0}
 
     db_rows = await _rank(
-        db, query_vec, {str(r.media_id) for r in rows}, req.ending, req.limit, req.medium
+        db, query_vec, {str(r.media_id) for r in rows}, ending, req.limit, medium
     )
 
     recs = []
@@ -109,13 +124,13 @@ async def recommend_media(
         )[:3]
         reasons = [ReasonOut(key=k, name=_NAME.get(k, k)) for k in reason_keys]
         # Truthful ending reason: only when the work actually lands in-band.
-        if req.ending != "any":
-            lo, hi = ENDING_BANDS[req.ending]
+        if ending != "any":
+            lo, hi = ENDING_BANDS[ending]
             if lo <= bd.get("ending_valence", 0.5) < hi:
                 reasons.append(
                     ReasonOut(
                         key="ending_valence",
-                        name=ENDING_REASON_NAME[req.ending],
+                        name=ENDING_REASON_NAME[ending],
                         kind="ending",
                     )
                 )

@@ -9,7 +9,7 @@ import RequireAuth from '@/components/RequireAuth'
 import RecRow from '@/components/RecRow'
 import ShelfCard from '@/components/ShelfCard'
 import Shelf from '@/components/Shelf'
-import MoodComposer from '@/components/MoodComposer'
+import FindControls from '@/components/FindControls'
 import { buildRows } from '@/lib/recommendationRows'
 
 const MIN_LOGGED = 4
@@ -53,13 +53,13 @@ function Recommendations() {
         </div>
       )}
 
-      <MoodComposer />
+      <FindControls />
 
       {results && results.length > 0 && (
         <section className="rec-row" aria-label="From your search">
           <div className="rec-row-head">
             <h2>From your search</h2>
-            <span className="rec-row-sub">What you just composed</span>
+            <span className="rec-row-sub">Matched to your search</span>
           </div>
           <Shelf>
             {results.map((r) => <ShelfCard key={r.item.id} item={r.item} reasons={r.reasons} />)}
