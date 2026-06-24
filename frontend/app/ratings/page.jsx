@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { api } from '@/lib/api'
 import { useRatings } from '@/lib/ratings-context'
 import { useSaves } from '@/lib/saves-context'
@@ -89,7 +90,10 @@ function RatingsManager() {
     <div>
       <div className="page-header">
         <h1>My ratings</h1>
-        <p>Everything you’ve logged — search, filter, and tune how each work landed.</p>
+        <p>
+          Everything you’ve logged — search, filter, and tune how each work landed.{' '}
+          <Link href="/fingerprint" className="link-btn" style={{ padding: 0 }}>See your emotional fingerprint →</Link>
+        </p>
       </div>
 
       <BookSearch books={available} onSelect={(id, fb) => { rate(id, fb); removeSave(id) }} />

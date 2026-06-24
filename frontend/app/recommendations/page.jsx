@@ -8,6 +8,7 @@ import { useSaves } from '@/lib/saves-context'
 import RequireAuth from '@/components/RequireAuth'
 import RecRow from '@/components/RecRow'
 import ShelfCard from '@/components/ShelfCard'
+import Shelf from '@/components/Shelf'
 import MoodComposer from '@/components/MoodComposer'
 import { buildRows } from '@/lib/recommendationRows'
 
@@ -60,9 +61,9 @@ function Recommendations() {
             <h2>From your search</h2>
             <span className="rec-row-sub">What you just composed</span>
           </div>
-          <div className="shelf-scroll">
+          <Shelf>
             {results.map((r) => <ShelfCard key={r.item.id} item={r.item} reasons={r.reasons} />)}
-          </div>
+          </Shelf>
         </section>
       )}
 
@@ -72,9 +73,9 @@ function Recommendations() {
             <h2>On your list</h2>
             <span className="rec-row-sub">Saved to experience later</span>
           </div>
-          <div className="shelf-scroll">
+          <Shelf>
             {savedItems.map((item) => <ShelfCard key={item.id} item={item} />)}
-          </div>
+          </Shelf>
         </section>
       )}
 

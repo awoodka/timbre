@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import ShelfCard from '@/components/ShelfCard'
+import Shelf from '@/components/Shelf'
 
 // One Netflix-style row. Owns its own fetch so rows load independently and pop in
 // as they resolve. `fetcher` returns a normalized array of { item, reasons? }.
@@ -28,11 +29,11 @@ export default function RecRow({ title, subtitle, fetcher }) {
         <h2>{title}</h2>
         {subtitle && <span className="rec-row-sub">{subtitle}</span>}
       </div>
-      <div className="shelf-scroll">
+      <Shelf>
         {items === null
           ? Array.from({ length: 6 }).map((_, i) => <div key={i} className="shelf-card skeleton" />)
           : items.map((r) => <ShelfCard key={r.item.id} item={r.item} reasons={r.reasons} />)}
-      </div>
+      </Shelf>
     </section>
   )
 }

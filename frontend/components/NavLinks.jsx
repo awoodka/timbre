@@ -43,6 +43,7 @@ export default function NavLinks() {
       <Link href="/recommendations">For You</Link>
       <Link href="/watchlist">My List</Link>
       <Link href="/ratings">My Ratings</Link>
+      <Link href="/fingerprint">Your Taste</Link>
       <Link href="/catalogue">Catalogue</Link>
       <Link href="/explore">Explore</Link>
       <div className="nav-user">
