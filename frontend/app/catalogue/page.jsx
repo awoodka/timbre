@@ -7,6 +7,7 @@ import BookCover from '@/components/BookCover'
 import { getEmotionColor } from '@/components/emotionColors'
 import { getMediaType } from '@/components/mediaType'
 import SaveButton from '@/components/SaveButton'
+import AddMediaFlow from '@/components/AddMediaFlow'
 
 const MOOD_THRESHOLD = 0.5
 
@@ -61,10 +62,18 @@ export default function Catalogue() {
   const [mood, setMood] = useState(null)
   const [sort, setSort] = useState('recent')
   const [types, setTypes] = useState([]) // multi-select media subset, only used on the All view
+  const [adding, setAdding] = useState(false)
 
   useEffect(() => {
     api.getMedia().then(setItems).finally(() => setLoading(false))
   }, [])
+
+  // A freshly-added work (post-analysis) → fold it into the catalogue so it just appears.
+  const handleAddComplete = (item) => {
+    setAdding(false)
+    setSearch(''); setMood(null)
+    setItems((prev) => (prev.some((b) => b.id === item.id) ? prev : [item, ...prev]))
+  }
 
   const feelsLike = useMemo(() => {
     const withVec = items.filter((i) => i.emotion_vector)
@@ -101,7 +110,13 @@ export default function Catalogue() {
         <div className="page-header">
           <h1>The Shelf</h1>
           <p>{items.length} works · by feeling, not genre</p>
+          <button className="catalogue-add-btn" style={{ marginTop: '0.6rem' }} onClick={() => { setSelected('all'); setAdding(true) }}>+ Add a work</button>
         </div>
+        {adding && (
+          <div className="add-panel add-panel-floating">
+            <AddMediaFlow existing={items} onComplete={handleAddComplete} onCancel={() => setAdding(false)} />
+          </div>
+        )}
         <div className="shelf-stage">
           <div className="shelf-books">
             {SHELF.map((s) => (
@@ -197,7 +212,14 @@ export default function Catalogue() {
             mood: {mood.replace(/_/g, ' ')} ✕
           </button>
         )}
+        <button className="catalogue-add-btn" style={{ marginLeft: 'auto' }} onClick={() => setAdding(true)}>+ Add a work</button>
       </div>
+
+      {adding && (
+        <div className="add-panel add-panel-floating">
+          <AddMediaFlow existing={items} onComplete={handleAddComplete} onCancel={() => setAdding(false)} />
+        </div>
+      )}
 
       {selected === 'all' && (
         <div className="catalogue-filters">

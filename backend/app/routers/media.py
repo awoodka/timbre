@@ -5,14 +5,19 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth import get_current_user
 from app.database import get_db
 from app.models.media import MediaItem
+from app.models.user import User
 from app.schemas import (
     MediaCreate,
+    MediaLookupRequest,
+    MediaLookupResponse,
     MediaResponse,
     MediaSimilarResponse,
 )
 from app.services.emotional_analysis import analyze_media
+from app.services.sources import lookup_metadata
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/media", tags=["media"])
@@ -53,6 +58,7 @@ async def create_media(
     item_in: MediaCreate,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
     item = MediaItem(
         medium=item_in.medium,
@@ -71,6 +77,31 @@ async def create_media(
         _run_analysis, item.id, item.medium, item.title, item.creator
     )
     return MediaResponse.from_orm_item(item)
+
+
+@router.post("/lookup", response_model=MediaLookupResponse)
+async def lookup_media(
+    req: MediaLookupRequest,
+    user: User = Depends(get_current_user),
+):
+    """Single-best-match metadata lookup for the add-media confirm step.
+
+    Hits the medium's external API (Google Books / TMDB / RAWG / Jikan) via the
+    same fetcher analysis uses. Returns found=false on no match or a missing API
+    key — the UI then offers an 'add as typed' path.
+    """
+    meta = await lookup_metadata(req.medium, req.title, req.creator)
+    if not meta:
+        return MediaLookupResponse(found=False)
+    creators = meta.get("creators") or []
+    return MediaLookupResponse(
+        found=True,
+        title=meta.get("title") or req.title,
+        creator=(creators[0] if creators else req.creator) or "",
+        year=(meta.get("published_date") or "")[:4],
+        cover_image_url=meta.get("cover_image_url") or "",
+        description=meta.get("description") or "",
+    )
 
 
 @router.get("", response_model=list[MediaResponse])
@@ -129,6 +160,7 @@ async def reanalyze_media(
     media_id: uuid.UUID,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
     item = await db.get(MediaItem, media_id)
     if not item:

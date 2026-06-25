@@ -1688,6 +1688,61 @@ button:disabled {
   padding: 1.15rem;
 }
 
+/* ---- Add media (look up → confirm → analyze) ---- */
+.add-panel { margin-top: 0.75rem; }
+.add-panel-floating { margin: 0.75rem 0 1.25rem; max-width: 520px; }
+.add-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.15rem;
+}
+.add-media-pills { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.add-actions { display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap; }
+.add-link {
+  background: none; border: none; padding: 0;
+  color: var(--text-muted); font-size: 0.85rem; cursor: pointer;
+}
+.add-link:hover { color: var(--text); text-decoration: underline; }
+.add-msg { font-size: 0.9rem; margin: 0; color: var(--text); }
+.add-sub { font-size: 0.8rem; color: var(--text-muted); margin: 0.2rem 0 0; }
+.add-hint { font-size: 0.82rem; color: var(--text-muted); margin: 0; }
+.add-error { color: var(--error); }
+.add-confirm { display: flex; gap: 0.85rem; align-items: flex-start; }
+.add-confirm-meta { display: flex; flex-direction: column; gap: 0.12rem; min-width: 0; }
+.add-desc {
+  font-size: 0.82rem; color: var(--text-muted); margin: 0.35rem 0 0;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.add-analyzing { display: flex; gap: 0.7rem; align-items: center; }
+.add-progress { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.add-progress-bar {
+  display: block; height: 100%; width: 40%;
+  background: var(--accent); border-radius: 2px;
+  animation: add-indeterminate 1.3s ease-in-out infinite;
+}
+@keyframes add-indeterminate {
+  0% { margin-left: -40%; }
+  100% { margin-left: 100%; }
+}
+.suggestion-add .suggestion-title { color: var(--accent); }
+.catalogue-add-btn {
+  background: none;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.catalogue-add-btn:hover { background: var(--accent); color: #fff; }
+
 .mc-presets { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.9rem 0 0.3rem; }
 .mc-preset {
   padding: 0.32rem 0.7rem;

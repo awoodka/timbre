@@ -41,6 +41,9 @@ function RatingsManager() {
   }, [])
   const chooseView = (v) => { setView(v); try { localStorage.setItem('timbre.ratingsView', v) } catch {} }
 
+  // A freshly-added work (post-analysis) → fold it into the corpus so it's rateable.
+  const handleAdded = (item) => setBooks((prev) => (prev.some((b) => b.id === item.id) ? prev : [item, ...prev]))
+
   const byId = useMemo(() => Object.fromEntries(books.map((b) => [b.id, b])), [books])
   const available = useMemo(
     () => books.filter((b) => b.analysis_status === 'completed' && !ratings.some((r) => r.media_id === b.id)),
@@ -96,7 +99,12 @@ function RatingsManager() {
         </p>
       </div>
 
-      <BookSearch books={available} onSelect={(id, fb) => { rate(id, fb); removeSave(id) }} />
+      <BookSearch
+        books={available}
+        allMedia={books}
+        onAdded={handleAdded}
+        onSelect={(id, fb) => { rate(id, fb); removeSave(id) }}
+      />
 
       {ratings.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>

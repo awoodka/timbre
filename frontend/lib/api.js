@@ -19,6 +19,9 @@ export const api = {
   getSimilar: (id, limit = 5) => request(`/media/${id}/similar?limit=${limit}`),
   createItem: (data) => request('/media', { method: 'POST', body: JSON.stringify(data) }),
   reanalyze: (id) => request(`/media/${id}/reanalyze`, { method: 'POST' }),
+  // Add-media: query the medium's external API for a best match (the confirm step).
+  lookupMedia: ({ medium = 'book', title, creator = '' } = {}) =>
+    request('/media/lookup', { method: 'POST', body: JSON.stringify({ medium, title, creator }) }),
   recommend: (limit = 10, medium = null) =>
     request('/recommend', { method: 'POST', body: JSON.stringify({ limit, ...(medium ? { medium } : {}) }) }),
   // Experience search: compose a mood (seek/avoid feelings), an ending tone, and

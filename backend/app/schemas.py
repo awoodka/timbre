@@ -16,6 +16,22 @@ class MediaCreate(BaseModel):
     metadata: dict | None = None
 
 
+class MediaLookupRequest(BaseModel):
+    # The add-media confirm step: query the medium's external API for a best match.
+    medium: str = "book"
+    title: str = Field(min_length=1, max_length=300)
+    creator: str = ""
+
+
+class MediaLookupResponse(BaseModel):
+    found: bool
+    title: str = ""
+    creator: str = ""
+    year: str = ""
+    cover_image_url: str = ""
+    description: str = ""
+
+
 class MediaResponse(BaseModel):
     id: UUID
     medium: str

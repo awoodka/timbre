@@ -45,6 +45,15 @@ async def _fetch_metadata(medium: str, title: str, creator: str) -> dict:
     return await fetch(title, creator) if fetch else {}
 
 
+async def lookup_metadata(medium: str, title: str, creator: str = "") -> dict:
+    """Public single-best-match metadata lookup (the add-media confirm step).
+
+    Uses the same per-medium fetcher analysis uses; returns {} on no match or a
+    missing API key (film/show/game need TMDB/RAWG keys; book/anime/manga don't).
+    """
+    return await _fetch_metadata(medium, title, creator)
+
+
 async def gather_context(medium: str, title: str, creator: str) -> dict:
     """Gather metadata + discourse for any medium."""
     noun = MEDIUM_NOUNS.get(medium, medium)

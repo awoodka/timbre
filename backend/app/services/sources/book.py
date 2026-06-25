@@ -1,5 +1,6 @@
 """Book metadata source: Google Books API (free, no key required)."""
 
+import asyncio
 import logging
 
 import httpx
@@ -9,12 +10,16 @@ logger = logging.getLogger(__name__)
 
 async def fetch_metadata(title: str, creator: str) -> dict:
     """Return a uniform metadata dict for a book via the Google Books API."""
-    query = f"{title} {creator}"
+    query = f"{title} {creator}".strip()
     url = "https://www.googleapis.com/books/v1/volumes"
+    params = {"q": query, "maxResults": 1}
 
     async with httpx.AsyncClient(timeout=10) as client:
         try:
-            resp = await client.get(url, params={"q": query, "maxResults": 1})
+            resp = await client.get(url, params=params)
+            if resp.status_code == 429:  # anonymous quota — brief backoff, one retry
+                await asyncio.sleep(1.5)
+                resp = await client.get(url, params=params)
             resp.raise_for_status()
             data = resp.json()
 

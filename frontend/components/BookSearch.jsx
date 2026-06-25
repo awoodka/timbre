@@ -3,15 +3,18 @@
 import { useEffect, useRef, useState } from 'react'
 import BookCover from '@/components/BookCover'
 import EmotionFeedback from '@/components/EmotionFeedback'
+import AddMediaFlow from '@/components/AddMediaFlow'
 import { topFeltEmotions } from '@/lib/emotions'
 
 // Search the corpus, pick a work, mark how each of its top feelings landed, and log
-// it. Extracted from the old /discover tool so it can power the ratings page.
-export default function BookSearch({ books, onSelect }) {
+// it. When a search has no match, offer to add the work (look up → confirm → analyze
+// → continue to rating it). Extracted from the old /discover tool.
+export default function BookSearch({ books, allMedia, onSelect, onAdded }) {
   const [query, setQuery] = useState('')
   const [selectedBook, setSelectedBook] = useState(null)
   const [feedback, setFeedback] = useState({})
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [adding, setAdding] = useState(false)
   const wrapperRef = useRef(null)
 
   const filtered = query.trim().length > 0
@@ -30,6 +33,10 @@ export default function BookSearch({ books, onSelect }) {
   }, [])
 
   const pickBook = (book) => { setSelectedBook(book); setFeedback({}); setQuery(book.title); setShowSuggestions(false) }
+
+  // After a freshly-added work finishes analyzing: fold it into the corpus and open
+  // the rate form on it (continue to rating it).
+  const handleAddComplete = (item) => { setAdding(false); onAdded?.(item); pickBook(item) }
 
   const handleSubmit = () => {
     if (!selectedBook) return
@@ -64,10 +71,26 @@ export default function BookSearch({ books, onSelect }) {
             ))}
           </div>
         )}
-        {showSuggestions && query.trim().length > 0 && filtered.length === 0 && (
-          <div className="suggestions"><div className="suggestion-empty">No matches found</div></div>
+        {showSuggestions && query.trim().length > 0 && filtered.length === 0 && !adding && (
+          <div className="suggestions">
+            <button type="button" className="suggestion-item suggestion-add" onClick={() => { setAdding(true); setShowSuggestions(false) }}>
+              <span className="suggestion-title">+ Add “{query.trim()}”</span>
+              <span className="suggestion-author">Not in Timbre yet — add &amp; analyze it</span>
+            </button>
+          </div>
         )}
       </div>
+
+      {adding && (
+        <div className="add-panel">
+          <AddMediaFlow
+            title={query.trim()}
+            existing={allMedia || books}
+            onComplete={handleAddComplete}
+            onCancel={() => setAdding(false)}
+          />
+        </div>
+      )}
 
       {selectedBook && (
         <div className="log-panel">
