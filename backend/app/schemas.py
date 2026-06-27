@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.dimensions import FELT_KEYS
 
@@ -153,8 +153,11 @@ class UserUpdate(BaseModel):
 
 class RatingUpsert(BaseModel):
     # {emotion_key: -2…+2} on a 5-point preference scale (not-for-me … loved);
-    # neutral (0) emotions are omitted.
-    feedback: dict[str, Literal[-2, -1, 1, 2]]
+    # neutral (0) emotions are omitted. Both fields are optional, but a rating needs
+    # at least one of them (an emotion mark or an enjoyment star).
+    feedback: dict[str, Literal[-2, -1, 1, 2]] = Field(default_factory=dict)
+    # Overall 1–5 "enjoyment" star — holistic preference, orthogonal to the emotion marks.
+    enjoyment: int | None = Field(default=None, ge=1, le=5)
 
     @field_validator("feedback")
     @classmethod
@@ -164,11 +167,18 @@ class RatingUpsert(BaseModel):
             raise ValueError(f"not felt-emotion keys: {bad}")
         return v
 
+    @model_validator(mode="after")
+    def _at_least_one(self):
+        if not self.feedback and self.enjoyment is None:
+            raise ValueError("a rating needs at least an emotion mark or an enjoyment star")
+        return self
+
 
 class RatingResponse(BaseModel):
     media_id: UUID
     feedback: dict[str, int]
     resonance: float
+    enjoyment: int | None = None
 
     model_config = {"from_attributes": True}
 

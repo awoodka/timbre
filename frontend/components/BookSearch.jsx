@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import BookCover from '@/components/BookCover'
 import EmotionFeedback from '@/components/EmotionFeedback'
 import AddMediaFlow from '@/components/AddMediaFlow'
+import StarRating from '@/components/StarRating'
 import { topFeltEmotions } from '@/lib/emotions'
 
 // Search the corpus, pick a work, mark how each of its top feelings landed, and log
@@ -13,6 +14,7 @@ export default function BookSearch({ books, allMedia, onSelect, onAdded }) {
   const [query, setQuery] = useState('')
   const [selectedBook, setSelectedBook] = useState(null)
   const [feedback, setFeedback] = useState({})
+  const [enjoyment, setEnjoyment] = useState(0)
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [adding, setAdding] = useState(false)
   const wrapperRef = useRef(null)
@@ -32,7 +34,7 @@ export default function BookSearch({ books, allMedia, onSelect, onAdded }) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  const pickBook = (book) => { setSelectedBook(book); setFeedback({}); setQuery(book.title); setShowSuggestions(false) }
+  const pickBook = (book) => { setSelectedBook(book); setFeedback({}); setEnjoyment(0); setQuery(book.title); setShowSuggestions(false) }
 
   // After a freshly-added work finishes analyzing: fold it into the corpus and open
   // the rate form on it (continue to rating it).
@@ -40,8 +42,8 @@ export default function BookSearch({ books, allMedia, onSelect, onAdded }) {
 
   const handleSubmit = () => {
     if (!selectedBook) return
-    onSelect(selectedBook.id, feedback)
-    setSelectedBook(null); setQuery(''); setFeedback({})
+    onSelect(selectedBook.id, feedback, enjoyment || null)
+    setSelectedBook(null); setQuery(''); setFeedback({}); setEnjoyment(0)
   }
 
   const handleQueryChange = (e) => {
@@ -101,13 +103,17 @@ export default function BookSearch({ books, allMedia, onSelect, onAdded }) {
               <span className="rated-author">{selectedBook.creator}</span>
             </div>
           </div>
+          <div className="rate-enjoy">
+            <span className="rate-enjoy-label">How much did you enjoy it?</span>
+            <StarRating value={enjoyment} onChange={setEnjoyment} />
+          </div>
           <p className="log-hint">How did each feeling sit with you? Mark what you wanted more of — or less of — and skip the neutral ones.</p>
           <EmotionFeedback
             emotions={topFeltEmotions(selectedBook.emotion_breakdown)}
             value={feedback}
             onChange={setFeedback}
           />
-          <button onClick={handleSubmit} className="add-btn" style={{ marginTop: '0.75rem' }}>Log this</button>
+          <button onClick={handleSubmit} className="add-btn" style={{ marginTop: '0.75rem' }} disabled={!Object.keys(feedback).length && !enjoyment}>Log this</button>
         </div>
       )}
     </div>

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import String, DateTime, JSON, Float, ForeignKey, UniqueConstraint
+from sqlalchemy import String, DateTime, JSON, Float, Integer, ForeignKey, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -57,6 +57,9 @@ class Rating(Base):
     feedback: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     # Derived overall score in [0,1] (server-computed from feedback); for sort/display.
     resonance: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    # Overall 1–5 "enjoyment" star — a holistic preference signal, distinct from the
+    # emotion marks and the derived resonance; never used in recommendation ranking.
+    enjoyment: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

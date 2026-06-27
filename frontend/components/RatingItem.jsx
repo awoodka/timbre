@@ -4,6 +4,7 @@ import Link from 'next/link'
 import BookCover from '@/components/BookCover'
 import EmotionFeedback from '@/components/EmotionFeedback'
 import FeedbackSummary from '@/components/FeedbackSummary'
+import StarRating from '@/components/StarRating'
 import { getMediaType } from '@/components/mediaType'
 import { topFeltEmotions } from '@/lib/emotions'
 
@@ -37,11 +38,24 @@ export default function RatingItem({
   )
 
   const editor = (
-    <EmotionFeedback
-      emotions={topFeltEmotions(book.emotion_breakdown)}
-      value={rating.feedback}
-      onChange={(fb) => onRate(rating.media_id, fb)}
-    />
+    <div className="ri-editor">
+      <div className="rate-enjoy">
+        <span className="rate-enjoy-label">Enjoyment</span>
+        <StarRating value={rating.enjoyment || 0} onChange={(n) => onRate(rating.media_id, rating.feedback, n || null)} />
+      </div>
+      <EmotionFeedback
+        emotions={topFeltEmotions(book.emotion_breakdown)}
+        value={rating.feedback}
+        onChange={(fb) => onRate(rating.media_id, fb, rating.enjoyment ?? null)}
+      />
+    </div>
+  )
+
+  const summary = (
+    <div className="ri-summary">
+      {rating.enjoyment ? <StarRating value={rating.enjoyment} readOnly size="sm" /> : null}
+      <FeedbackSummary feedback={rating.feedback} />
+    </div>
   )
 
   if (view === 'grid') {
@@ -52,7 +66,7 @@ export default function RatingItem({
           <div className="rating-card-title">{book.title}</div>
           <div className="rating-card-author">{book.creator}</div>
         </Link>
-        {editing ? editor : <FeedbackSummary feedback={rating.feedback} />}
+        {editing ? editor : summary}
         <Controls />
       </div>
     )
@@ -68,7 +82,7 @@ export default function RatingItem({
         </Link>
         <Controls />
       </div>
-      {editing ? editor : <FeedbackSummary feedback={rating.feedback} />}
+      {editing ? editor : summary}
     </div>
   )
 }

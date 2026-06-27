@@ -12,6 +12,7 @@ import { getMediaType, MEDIA_TYPES } from '@/components/mediaType'
 import {
   buildTasteProfile, lovedAvoided, tasteAxes, archetype, personaLine,
   arcPreference, mediaSplit, resonanceStats, definingWorks, radarData,
+  enjoymentByMedium, enjoymentByCreator, enjoymentByGenre, enjoymentStats,
 } from '@/lib/taste'
 
 const fmt = (s) => s.replace(/_/g, ' ')
@@ -73,6 +74,23 @@ function MediaBars({ counts }) {
   )
 }
 
+// Avg-enjoyment bars (0–5, in the star/warning hue) — for the "beyond emotion" section.
+function EnjoyBars({ rows, label }) {
+  return (
+    <div className="fp-bars">
+      {rows.map(({ key, avg }) => (
+        <div key={key} className="fp-bar-row">
+          <span className="fp-bar-label">{label ? label(key) : key}</span>
+          <span className="fp-bar-track">
+            <span className="fp-bar-fill" style={{ width: `${(avg / 5) * 100}%`, background: 'var(--warning)' }} />
+          </span>
+          <span className="fp-bar-num">{avg.toFixed(1)}★</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function Fingerprint() {
   const { ratings } = useRatings()
   const [byId, setById] = useState({})
@@ -98,6 +116,10 @@ function Fingerprint() {
   const stats = useMemo(() => resonanceStats(ratings), [ratings])
   const defining = useMemo(() => definingWorks(ratedWorks, 5), [ratedWorks])
   const radar = useMemo(() => radarData(profile), [profile])
+  const enjoyMedium = useMemo(() => enjoymentByMedium(ratedWorks), [ratedWorks])
+  const enjoyCreator = useMemo(() => enjoymentByCreator(ratedWorks, 6), [ratedWorks])
+  const enjoyGenre = useMemo(() => enjoymentByGenre(ratedWorks, 6), [ratedWorks])
+  const enjoyStats = useMemo(() => enjoymentStats(ratings), [ratings])
 
   if (!loaded) return <div className="loading"><span className="spinner" /> Loading…</div>
 
@@ -168,6 +190,18 @@ function Fingerprint() {
           <h2 className="section-title">Across media</h2>
           <MediaBars counts={media} />
         </div>
+
+        {enjoyStats.count > 0 && (
+          <div className="fp-section">
+            <h2 className="section-title">What you gravitate toward — beyond emotion</h2>
+            <p className="fp-stat">
+              Your enjoyment, separate from the feelings — across {enjoyStats.count} starred {enjoyStats.count === 1 ? 'work' : 'works'} (avg {enjoyStats.avg.toFixed(1)}★).
+            </p>
+            {enjoyMedium.length > 0 && (<><h3 className="fp-subhead">By medium</h3><EnjoyBars rows={enjoyMedium} label={(k) => getMediaType(k).label} /></>)}
+            {enjoyCreator.length > 0 && (<><h3 className="fp-subhead">Top creators</h3><EnjoyBars rows={enjoyCreator} /></>)}
+            {enjoyGenre.length > 0 && (<><h3 className="fp-subhead">By genre</h3><EnjoyBars rows={enjoyGenre} label={fmt} /></>)}
+          </div>
+        )}
 
         <div className="fp-section">
           <h2 className="section-title">By the numbers</h2>

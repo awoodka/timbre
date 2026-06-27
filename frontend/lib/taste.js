@@ -135,3 +135,34 @@ export function radarData(profile) {
   const max = Math.max(0.0001, ...FELT.map((k) => Math.max(0, profile[k] || 0)))
   return FELT.map((k) => ({ key: k, label: fmt(k), value: Math.max(0, profile[k] || 0) / max }))
 }
+
+// ---- Enjoyment (the holistic star) — taste *beyond* emotion. Orthogonal to resonance
+// and never fed into ranking; surfaced as insight (what you gravitate toward). ----
+
+// Average enjoyment grouped by a key extractor → sorted [{key, avg, count}] (desc).
+function _avgEnjoyBy(ratedWorks, keysOf) {
+  const sums = {}, counts = {}
+  for (const r of ratedWorks || []) {
+    if (!r.enjoyment) continue
+    for (const k of keysOf(r)) {
+      sums[k] = (sums[k] || 0) + r.enjoyment
+      counts[k] = (counts[k] || 0) + 1
+    }
+  }
+  return Object.keys(counts)
+    .map((k) => ({ key: k, avg: sums[k] / counts[k], count: counts[k] }))
+    .sort((a, b) => b.avg - a.avg || b.count - a.count)
+}
+
+export const enjoymentByMedium = (ratedWorks) =>
+  _avgEnjoyBy(ratedWorks, (r) => (r.book?.medium ? [r.book.medium] : []))
+export const enjoymentByCreator = (ratedWorks, n = 6) =>
+  _avgEnjoyBy(ratedWorks, (r) => (r.book?.creator ? [r.book.creator] : [])).slice(0, n)
+export const enjoymentByGenre = (ratedWorks, n = 6) =>
+  _avgEnjoyBy(ratedWorks, (r) => (Array.isArray(r.book?.metadata?.genre) ? r.book.metadata.genre : [])).slice(0, n)
+
+export function enjoymentStats(ratings) {
+  const vals = (ratings || []).map((r) => r.enjoyment).filter((v) => v)
+  if (!vals.length) return { count: 0, avg: 0 }
+  return { count: vals.length, avg: vals.reduce((a, b) => a + b, 0) / vals.length }
+}

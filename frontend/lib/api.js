@@ -49,8 +49,8 @@ export const api = {
 
   // ---- per-user ratings ----
   getRatings: () => request('/ratings'),
-  putRating: (media_id, feedback) =>
-    request(`/ratings/${media_id}`, { method: 'PUT', body: JSON.stringify({ feedback }) }),
+  putRating: (media_id, feedback, enjoyment = null) =>
+    request(`/ratings/${media_id}`, { method: 'PUT', body: JSON.stringify({ feedback, enjoyment }) }),
   deleteRating: (media_id) => request(`/ratings/${media_id}`, { method: 'DELETE' }),
 
   // ---- watchlist / saved-for-later ----

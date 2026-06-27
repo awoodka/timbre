@@ -18,7 +18,7 @@ export function RatingsProvider({ children }) {
     if (user) {
       api.getRatings()
         .then((rows) => {
-          if (active) setRatings(rows.map((r) => ({ media_id: r.media_id, feedback: r.feedback || {}, resonance: r.resonance ?? 0.5 })))
+          if (active) setRatings(rows.map((r) => ({ media_id: r.media_id, feedback: r.feedback || {}, resonance: r.resonance ?? 0.5, enjoyment: r.enjoyment ?? null })))
         })
         .catch(() => {})
     } else {
@@ -29,17 +29,17 @@ export function RatingsProvider({ children }) {
 
   // Add or update a rating. Persists to the account when signed in; otherwise
   // stays in-memory (anonymous, as before).
-  const rate = useCallback((mediaId, feedback) => {
+  const rate = useCallback((mediaId, feedback, enjoyment = null) => {
     setRatings((prev) => {
       const exists = prev.some((r) => r.media_id === mediaId)
       return exists
-        ? prev.map((r) => (r.media_id === mediaId ? { ...r, feedback } : r))
-        : [...prev, { media_id: mediaId, feedback, resonance: 0.5 }]
+        ? prev.map((r) => (r.media_id === mediaId ? { ...r, feedback, enjoyment } : r))
+        : [...prev, { media_id: mediaId, feedback, resonance: 0.5, enjoyment }]
     })
     setResults(null)
     if (user) {
-      api.putRating(mediaId, feedback)
-        .then((res) => setRatings((prev) => prev.map((r) => (r.media_id === mediaId ? { ...r, resonance: res.resonance } : r))))
+      api.putRating(mediaId, feedback, enjoyment)
+        .then((res) => setRatings((prev) => prev.map((r) => (r.media_id === mediaId ? { ...r, resonance: res.resonance, enjoyment: res.enjoyment ?? null } : r))))
         .catch(() => {})
     }
   }, [user])

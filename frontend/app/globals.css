@@ -879,6 +879,14 @@ button:disabled {
 .star-rating .star.filled {
   color: var(--warning);
 }
+.star-rating.readonly { pointer-events: none; }
+.star-rating.sm .star { font-size: 0.95rem; }
+
+/* Enjoyment (star) in the rate form + on rating cards */
+.rate-enjoy { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; flex-wrap: wrap; }
+.rate-enjoy-label { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
+.ri-editor { display: flex; flex-direction: column; gap: 0.4rem; }
+.ri-summary { display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-start; }
 
 /* Add book search form */
 .add-book-form {

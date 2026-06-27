@@ -72,6 +72,7 @@ function RatingsManager() {
     }
     if (sort === 'title') list = [...list].sort((a, b) => a.book.title.localeCompare(b.book.title))
     else if (sort === 'resonance') list = [...list].sort((a, b) => (b.resonance ?? 0.5) - (a.resonance ?? 0.5))
+    else if (sort === 'enjoyment') list = [...list].sort((a, b) => (b.enjoyment ?? -1) - (a.enjoyment ?? -1))
     return list
   }, [ratings, byId, search, types, mood, band, sort])
 
@@ -103,7 +104,7 @@ function RatingsManager() {
         books={available}
         allMedia={books}
         onAdded={handleAdded}
-        onSelect={(id, fb) => { rate(id, fb); removeSave(id) }}
+        onSelect={(id, fb, enj) => { rate(id, fb, enj); removeSave(id) }}
       />
 
       {ratings.length === 0 ? (
@@ -139,6 +140,7 @@ function RatingsManager() {
               <select className="sort-select" value={sort} onChange={(e) => setSort(e.target.value)}>
                 <option value="recent">Recently added</option>
                 <option value="resonance">Resonance</option>
+                <option value="enjoyment">Enjoyment</option>
                 <option value="title">Title (A–Z)</option>
               </select>
             </label>

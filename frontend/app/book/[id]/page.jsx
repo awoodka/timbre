@@ -9,6 +9,7 @@ import EmotionRadar from '@/components/EmotionRadar'
 import EmotionBar from '@/components/EmotionBar'
 import SaveButton from '@/components/SaveButton'
 import EmotionFeedback from '@/components/EmotionFeedback'
+import StarRating from '@/components/StarRating'
 import { useAuth } from '@/lib/auth-context'
 import { useRatings } from '@/lib/ratings-context'
 import { useSaves } from '@/lib/saves-context'
@@ -42,7 +43,8 @@ export default function BookDetail() {
 
   const myRating = ratings.find((r) => r.media_id === book.id)
   const emotions = topFeltEmotions(book.emotion_breakdown)
-  const onRate = (fb) => { rate(book.id, fb); if (isSaved(book.id)) removeSave(book.id) }
+  const onRate = (fb) => { rate(book.id, fb, myRating?.enjoyment ?? null); if (isSaved(book.id)) removeSave(book.id) }
+  const onEnjoy = (n) => { rate(book.id, myRating?.feedback || {}, n || null); if (isSaved(book.id)) removeSave(book.id) }
 
   return (
     <div className="book-detail">
@@ -87,18 +89,20 @@ export default function BookDetail() {
 
       {rateOpen && user && (
         <div className="detail-rating">
+          <div className="rate-enjoy">
+            <span className="rate-enjoy-label">How much did you enjoy it?</span>
+            <StarRating value={myRating?.enjoyment || 0} onChange={onEnjoy} />
+          </div>
           <h2 className="section-title">How did it make you feel?</h2>
           {emotions.length > 0 ? (
-            <>
-              <EmotionFeedback emotions={emotions} value={myRating?.feedback || {}} onChange={onRate} />
-              {myRating && (
-                <button type="button" className="mc-clear" onClick={() => removeRating(book.id)} style={{ marginTop: '0.5rem' }}>
-                  Remove rating
-                </button>
-              )}
-            </>
+            <EmotionFeedback emotions={emotions} value={myRating?.feedback || {}} onChange={onRate} />
           ) : (
-            <p style={{ color: 'var(--text-muted)' }}>Not analyzed yet — nothing to rate.</p>
+            <p style={{ color: 'var(--text-muted)' }}>Not analyzed yet — rate it with a star above.</p>
+          )}
+          {myRating && (
+            <button type="button" className="mc-clear" onClick={() => removeRating(book.id)} style={{ marginTop: '0.5rem' }}>
+              Remove rating
+            </button>
           )}
         </div>
       )}

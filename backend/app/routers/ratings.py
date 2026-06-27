@@ -39,9 +39,11 @@ async def upsert_rating(
     if existing:
         existing.feedback = data.feedback
         existing.resonance = resonance
+        existing.enjoyment = data.enjoyment
     else:
         existing = Rating(
-            user_id=user.id, media_id=media_id, feedback=data.feedback, resonance=resonance
+            user_id=user.id, media_id=media_id, feedback=data.feedback,
+            resonance=resonance, enjoyment=data.enjoyment,
         )
         db.add(existing)
     # Rating a work means you've experienced it → drop it from the watchlist.
