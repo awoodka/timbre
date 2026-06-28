@@ -15,6 +15,7 @@ from app.schemas import (
     RecommendRequest,
     RecommendResponse,
 )
+from app.services.affinity import build_affinity, confidence, genres_of, rerank
 from app.services.feedback import build_taste_profile
 from app.services.mood import blend_vectors, build_mood_vector
 from app.services.query_parse import parse_query
@@ -28,6 +29,13 @@ MIN_LOGGED_WORKS = 4
 NL_ALPHA = 0.8
 # A liked/sought emotion is a "reason" for a rec if the work scores at least this raw.
 REASON_THRESHOLD = 0.5
+
+# Enjoyment re-rank (PURE-TASTE recs only). After retrieving the emotionally-nearest
+# candidates, gently float up the media/creators/genres the user tends to ENJOY. The
+# tilt is bounded by ±ENJOY_LAMBDA and confidence-scaled, so emotion stays the core
+# (retrieval + the dominant term). See services/affinity.py.
+ENJOY_LAMBDA = 0.08
+RERANK_POOL = 50  # emotional candidates to consider before the gentle re-rank
 
 # Experience search — soft ending lean. We don't hard-filter on how a work ends;
 # instead the ranking subtracts a small penalty proportional to the distance between
@@ -88,6 +96,7 @@ async def recommend_media(
 
     taste = build_taste_profile([r.feedback for r in rows]) if rows else np.zeros(NUM_DIMENSIONS)
 
+    affinity = None
     if not is_experience:
         # ── Pure-taste path (gated) ──
         if len(rows) < MIN_LOGGED_WORKS:
@@ -98,6 +107,8 @@ async def recommend_media(
             return RecommendResponse(logged=len(rows), needed=MIN_LOGGED_WORKS)
         query_vec = taste / norm
         liked = {DIMENSION_KEYS[i] for i, w in enumerate(query_vec) if w > 0}
+        # Gentle enjoyment tilt on the emotionally-ranked results (pure-taste only).
+        affinity = await _enjoyment_affinity(db, user.id)
     else:
         # ── Experience search (ungated) ──
         mood_vec = build_mood_vector(mood or {})
@@ -111,7 +122,7 @@ async def recommend_media(
         liked = sought or {DIMENSION_KEYS[i] for i, w in enumerate(query_vec) if w > 0}
 
     db_rows = await _rank(
-        db, query_vec, {str(r.media_id) for r in rows}, ending, req.limit, medium
+        db, query_vec, {str(r.media_id) for r in rows}, ending, req.limit, medium, affinity
     )
 
     recs = []
@@ -145,7 +156,22 @@ async def recommend_media(
     return RecommendResponse(logged=len(rows), needed=MIN_LOGGED_WORKS, recommendations=recs)
 
 
-async def _rank(db, query_vec, rated_ids, ending, limit, medium=None):
+async def _enjoyment_affinity(db, user_id):
+    """The signed-in user's enjoyment-by-lane table + confidence, for the re-rank.
+    Returns None when there's no usable star signal — so ranking stays pure emotion."""
+    q = (
+        select(Rating.enjoyment, MediaItem.medium, MediaItem.creator, MediaItem.metadata_)
+        .join(MediaItem, Rating.media_id == MediaItem.id)
+        .where(Rating.user_id == user_id, Rating.enjoyment.isnot(None))
+    )
+    rated = [(e, m, c, genres_of(meta)) for (e, m, c, meta) in (await db.execute(q)).all()]
+    if not rated:
+        return None
+    table, overall, n = build_affinity(rated)
+    return (table, overall, confidence(n)) if table else None
+
+
+async def _rank(db, query_vec, rated_ids, ending, limit, medium=None, affinity=None):
     """Rank the corpus by emotional fit, excluding already-rated works.
 
     The displayed `similarity` is always the pure cosine match. The ORDER BY leans
@@ -154,8 +180,13 @@ async def _rank(db, query_vec, rated_ids, ending, limit, medium=None):
     (ending-only search by a brand-new user), we rank purely by how close each
     work lands to the target ending. An optional `medium` restricts the candidate
     set to one medium (powers per-medium "Beyond books" rows).
+
+    `affinity` (pure-taste recs only): when given as (table, overall, conf), retrieve
+    a larger pool by emotion and gently re-rank it by enjoyment (bounded by
+    ENJOY_LAMBDA). Retrieval stays purely emotional and the returned `similarity`
+    stays the cosine. None ⇒ the original one-shot cosine ranking, unchanged.
     """
-    params = {"lim": limit}
+    params = {"lim": max(limit * 3, RERANK_POOL) if affinity else limit}
     exclude = ""
     if rated_ids:
         placeholders = ", ".join(f"'{rid}'" for rid in rated_ids)
@@ -186,13 +217,22 @@ async def _rank(db, query_vec, rated_ids, ending, limit, medium=None):
                 f"- :lam * abs({_EV} - :target)) DESC"
             )
 
+    cols = f"id, {select_sim} AS similarity"
+    if affinity:
+        cols += ", medium, creator, metadata"
     query = text(
         f"""
-        SELECT id, {select_sim} AS similarity
+        SELECT {cols}
         FROM media
         WHERE emotion_vector IS NOT NULL {exclude} {medium_clause}
         ORDER BY {order_by}
         LIMIT :lim
         """
     )
-    return (await db.execute(query, params)).fetchall()
+    result = (await db.execute(query, params)).fetchall()
+    if not affinity:
+        return result
+    # Gentle, bounded enjoyment re-rank over the emotionally-retrieved pool.
+    table, overall, conf = affinity
+    candidates = [(r[0], float(r[1]), r[2], r[3], genres_of(r[4])) for r in result]
+    return rerank(candidates, table, overall, conf, ENJOY_LAMBDA)[:limit]

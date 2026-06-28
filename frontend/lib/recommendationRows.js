@@ -46,10 +46,12 @@ export function buildRows({ ratings = [], mediaById = {} }) {
     })
   }
 
-  // Because you loved {title} — highest resonance, distinct, up to 3.
+  // Because you loved {title} — seed on resonance, nudged by enjoyment (works you
+  // both felt AND enjoyed make the best anchors), distinct, up to 3.
+  const seedScore = (r) => (r.resonance ?? 0.5) + 0.15 * (r.enjoyment ? (r.enjoyment - 3) / 2 : 0)
   ;[...ratings]
     .filter((r) => mediaById[r.media_id])
-    .sort((a, b) => (b.resonance ?? 0.5) - (a.resonance ?? 0.5))
+    .sort((a, b) => seedScore(b) - seedScore(a))
     .slice(0, 3)
     .forEach((r) => {
       rows.push({
