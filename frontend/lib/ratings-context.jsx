@@ -50,8 +50,16 @@ export function RatingsProvider({ children }) {
     if (user) api.deleteRating(mediaId).catch(() => {})
   }, [user])
 
+  // Wipe the signed-in user's whole taste profile (Settings → reset). Server-first
+  // so local state only clears once the delete actually lands.
+  const clearRatings = useCallback(async () => {
+    await api.resetRatings()
+    setRatings([])
+    setResults(null)
+  }, [])
+
   return (
-    <RatingsContext.Provider value={{ ratings, setRatings, results, setResults, rate, removeRating }}>
+    <RatingsContext.Provider value={{ ratings, setRatings, results, setResults, rate, removeRating, clearRatings }}>
       {children}
     </RatingsContext.Provider>
   )

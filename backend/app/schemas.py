@@ -79,6 +79,23 @@ class MediaSimilarResponse(BaseModel):
     reasons: list[ReasonOut] = []
 
 
+class ExplainRequest(BaseModel):
+    regenerate: bool = False
+
+
+class ExplainSource(BaseModel):
+    id: str
+    title: str
+    medium: str
+
+
+class ExplainResponse(BaseModel):
+    explanation: str = ""
+    cached: bool = False
+    needs_more: bool = False   # user has no usable rated works to bridge from
+    sources: list[ExplainSource] = []
+
+
 class RecommendResponse(BaseModel):
     gated: bool = False        # true when the user hasn't logged enough works yet
     signup_required: bool = False  # anon hit the free natural-language search cap
@@ -147,7 +164,17 @@ class UserResponse(BaseModel):
 
 class UserUpdate(BaseModel):
     display_name: str | None = Field(default=None, max_length=100)
+    username: str | None = Field(default=None, min_length=3, max_length=50)
     settings: dict | None = None
+
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=6, max_length=200)
+
+
+class AccountDelete(BaseModel):
+    password: str
 
 
 # ---- Per-user ratings ----

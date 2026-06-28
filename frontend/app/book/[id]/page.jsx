@@ -26,6 +26,10 @@ export default function BookDetail() {
   const [loading, setLoading] = useState(true)
   const [showBars, setShowBars] = useState(false)
   const [rateOpen, setRateOpen] = useState(false)
+  const [explainOpen, setExplainOpen] = useState(false)
+  const [explain, setExplain] = useState(null)
+  const [explainLoading, setExplainLoading] = useState(false)
+  const [explainError, setExplainError] = useState(null)
 
   useEffect(() => {
     setLoading(true)
@@ -45,6 +49,22 @@ export default function BookDetail() {
   const emotions = topFeltEmotions(book.emotion_breakdown)
   const onRate = (fb) => { rate(book.id, fb, myRating?.enjoyment ?? null); if (isSaved(book.id)) removeSave(book.id) }
   const onEnjoy = (n) => { rate(book.id, myRating?.feedback || {}, n || null); if (isSaved(book.id)) removeSave(book.id) }
+
+  const loadExplain = async (regenerate = false) => {
+    setExplainLoading(true); setExplainError(null)
+    try {
+      setExplain(await api.explainRecommendation(book.id, { regenerate }))
+    } catch (e) {
+      setExplainError(e.message)
+    } finally {
+      setExplainLoading(false)
+    }
+  }
+  const toggleExplain = () => {
+    const next = !explainOpen
+    setExplainOpen(next)
+    if (next && !explain && !explainLoading) loadExplain(false)
+  }
 
   return (
     <div className="book-detail">
@@ -83,6 +103,16 @@ export default function BookDetail() {
               </svg>
               {myRating ? 'Edit rating' : 'Rate'}
             </button>
+            {user && ratings.length > 0 && book.emotion_breakdown && (
+              <button
+                type="button"
+                className={`rate-toggle${explainOpen ? ' rated' : ''}`}
+                onClick={toggleExplain}
+                aria-expanded={explainOpen}
+              >
+                ✨ Why this fits you
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -103,6 +133,25 @@ export default function BookDetail() {
             <button type="button" className="mc-clear" onClick={() => removeRating(book.id)} style={{ marginTop: '0.5rem' }}>
               Remove rating
             </button>
+          )}
+        </div>
+      )}
+
+      {explainOpen && (
+        <div className="add-flow bridge-panel">
+          {explainLoading && <p className="add-msg"><span className="spinner" /> Reading your taste…</p>}
+          {!explainLoading && explainError && <p className="add-msg add-error">{explainError}</p>}
+          {!explainLoading && !explainError && explain?.needs_more && (
+            <p className="add-msg">Rate a few works you love first — then I can explain why this one fits your taste.</p>
+          )}
+          {!explainLoading && !explainError && explain?.explanation && (
+            <>
+              <p className="bridge-text">{explain.explanation}</p>
+              <div className="add-actions">
+                <button type="button" className="add-link" onClick={() => loadExplain(true)} disabled={explainLoading}>Regenerate</button>
+                <button type="button" className="add-link" onClick={() => setExplainOpen(false)}>Close</button>
+              </div>
+            </>
           )}
         </div>
       )}

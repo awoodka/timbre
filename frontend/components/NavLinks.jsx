@@ -47,7 +47,7 @@ export default function NavLinks() {
       <Link href="/catalogue">Catalogue</Link>
       <Link href="/explore">Explore</Link>
       <div className="nav-user">
-        <Link href="/account" className="nav-user-name">{user.display_name || user.username}</Link>
+        <Link href="/settings" className="nav-user-name">{user.display_name || user.username}</Link>
         <button className="nav-logout" onClick={doLogout}>Log out</button>
       </div>
     </div>

@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import init_db
 import app.models.user  # noqa: F401  -- register User/Rating tables with Base.metadata
+import app.models.rec_explanation  # noqa: F401  -- register RecExplanation table
 from app.routers import media, recommend, dimensions, auth, ratings, saves, projection
 
 logging.basicConfig(level=logging.INFO)

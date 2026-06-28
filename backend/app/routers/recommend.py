@@ -143,8 +143,10 @@ async def recommend_media(
             return RecommendResponse(logged=len(rows), needed=MIN_LOGGED_WORKS)
         query_vec = taste / norm
         liked = {DIMENSION_KEYS[i] for i, w in enumerate(query_vec) if w > 0}
-        # Gentle enjoyment tilt on the emotionally-ranked results (pure-taste only).
-        affinity = await _enjoyment_affinity(db, user.id)
+        # Gentle enjoyment tilt on the emotionally-ranked results (pure-taste only),
+        # opt-in per user (Settings → "lean toward what I enjoy"); off ⇒ pure emotion.
+        if user.settings.get("lean_enjoyment", False):
+            affinity = await _enjoyment_affinity(db, user.id)
     else:
         # ── Experience search (ungated) ──
         mood_vec = build_mood_vector(mood or {})

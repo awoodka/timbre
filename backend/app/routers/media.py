@@ -8,14 +8,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import get_current_user
 from app.database import get_db
 from app.models.media import MediaItem
+from app.models.rec_explanation import RecExplanation
 from app.models.user import User
 from app.schemas import (
+    ExplainRequest,
+    ExplainResponse,
+    ExplainSource,
     MediaCreate,
     MediaLookupRequest,
     MediaLookupResponse,
     MediaResponse,
     MediaSimilarResponse,
 )
+from app.services.bridge import generate_bridge
 from app.services.emotional_analysis import analyze_media
 from app.services.sources import lookup_metadata
 
@@ -174,3 +179,86 @@ async def reanalyze_media(
     )
     await db.refresh(item)
     return MediaResponse.from_orm_item(item)
+
+
+async def _closest_rated_works(db, user_id, target_id, target_vector, limit=5):
+    """The user's own rated works emotionally closest to the target (pgvector cosine),
+    excluding works they disliked. These anchor the bridge explanation."""
+    vec = "[" + ",".join(str(v) for v in target_vector) + "]"
+    q = text(
+        """
+        SELECT m.id, m.title, m.medium, m.emotion_breakdown,
+               r.feedback, r.resonance, r.enjoyment
+        FROM media m
+        JOIN ratings r ON r.media_id = m.id
+        WHERE r.user_id = :uid
+          AND m.id != :tid
+          AND m.emotion_vector IS NOT NULL
+          AND r.resonance >= 0.5
+        ORDER BY m.emotion_vector <=> CAST(:vec AS vector) ASC
+        LIMIT :lim
+        """
+    )
+    rows = (
+        await db.execute(
+            q, {"vec": vec, "uid": str(user_id), "tid": str(target_id), "lim": limit}
+        )
+    ).fetchall()
+    return [
+        {
+            "id": row[0],
+            "title": row[1],
+            "medium": row[2],
+            "emotion_breakdown": row[3] or {},
+            "feedback": row[4] or {},
+            "resonance": row[5],
+            "enjoyment": row[6],
+        }
+        for row in rows
+    ]
+
+
+@router.post("/{media_id}/explain", response_model=ExplainResponse)
+async def explain_media(
+    media_id: uuid.UUID,
+    req: ExplainRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """On-demand 'why this fits your taste' — a short Gemini explanation grounded in
+    the user's emotionally-closest rated works. Cached per (user, work); `regenerate`
+    bypasses it. Costs one Flash call per new (user, work)."""
+    item = await db.get(MediaItem, media_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Media item not found")
+    if item.emotion_vector is None or item.analysis_status != "completed":
+        raise HTTPException(status_code=400, detail="Item has not been analyzed yet")
+
+    cached = await db.scalar(
+        select(RecExplanation).where(
+            RecExplanation.user_id == user.id,
+            RecExplanation.media_id == media_id,
+        )
+    )
+    if cached and not req.regenerate:
+        return ExplainResponse(explanation=cached.text, cached=True)
+
+    neighbors = await _closest_rated_works(db, user.id, media_id, item.emotion_vector)
+    if not neighbors:
+        return ExplainResponse(needs_more=True)
+
+    explanation = await generate_bridge(item, neighbors)
+
+    if cached:
+        cached.text = explanation
+    else:
+        db.add(RecExplanation(user_id=user.id, media_id=media_id, text=explanation))
+    await db.commit()
+
+    return ExplainResponse(
+        explanation=explanation,
+        sources=[
+            ExplainSource(id=str(n["id"]), title=n["title"], medium=n["medium"])
+            for n in neighbors
+        ],
+    )

@@ -17,6 +17,9 @@ export const api = {
   getMedia: () => request('/media'),
   getItem: (id) => request(`/media/${id}`),
   getSimilar: (id, limit = 5) => request(`/media/${id}/similar?limit=${limit}`),
+  // On-demand "why this fits your taste" explanation (Gemini, cached per user+work).
+  explainRecommendation: (mediaId, { regenerate = false } = {}) =>
+    request(`/media/${mediaId}/explain`, { method: 'POST', body: JSON.stringify({ regenerate }) }),
   createItem: (data) => request('/media', { method: 'POST', body: JSON.stringify(data) }),
   reanalyze: (id) => request(`/media/${id}/reanalyze`, { method: 'POST' }),
   // Add-media: query the medium's external API for a best match (the confirm step).
@@ -46,6 +49,12 @@ export const api = {
     request('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
   logout: () => request('/auth/logout', { method: 'POST' }),
   updateProfile: (data) => request('/auth/me', { method: 'PATCH', body: JSON.stringify(data) }),
+  changePassword: (current_password, new_password) =>
+    request('/auth/change-password', { method: 'POST', body: JSON.stringify({ current_password, new_password }) }),
+  resetRatings: () => request('/auth/reset-ratings', { method: 'POST' }),
+  exportData: () => request('/auth/export'),
+  deleteAccount: (password) =>
+    request('/auth/delete-account', { method: 'POST', body: JSON.stringify({ password }) }),
 
   // ---- per-user ratings ----
   getRatings: () => request('/ratings'),
