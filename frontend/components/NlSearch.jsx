@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { api } from '@/lib/api'
 import { useRatings } from '@/lib/ratings-context'
 
@@ -18,6 +19,7 @@ export default function NlSearch({ open = false }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [empty, setEmpty] = useState(false)
+  const [signupRequired, setSignupRequired] = useState(false)
 
   const run = async (q) => {
     const description = (q ?? text).trim()
@@ -25,8 +27,15 @@ export default function NlSearch({ open = false }) {
     setLoading(true)
     setError(null)
     setEmpty(false)
+    setSignupRequired(false)
     try {
       const res = await api.recommendNL({ description, limit: 12 })
+      // Anonymous visitors get a few free Gemini searches per day, then a sign-up wall.
+      if (res.signup_required) {
+        setSignupRequired(true)
+        setResults([])
+        return
+      }
       const recs = res.recommendations || []
       setResults(recs)
       setEmpty(recs.length === 0)
@@ -69,6 +78,12 @@ export default function NlSearch({ open = false }) {
         ))}
       </div>
       {error && <p className="mc-error nl-search-msg">{error}</p>}
+      {signupRequired && (
+        <p className="nl-search-wall nl-search-msg">
+          That’s your free look for today.{' '}
+          <Link href="/login">Sign up to keep exploring — it’s free →</Link>
+        </p>
+      )}
       {empty && !loading && (
         <p className="nl-search-empty nl-search-msg">
           Couldn’t read a feeling in that — try describing the mood or the moment.

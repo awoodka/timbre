@@ -1,0 +1,17 @@
+# Repo-root ignore — applies when a build uses the repo root as context
+# (e.g. `docker compose` with `context: .`). The active dev/prod builds use
+# `build: ./backend` and `build: ./frontend`, so those read backend/.dockerignore
+# and frontend/.dockerignore respectively; this file future-proofs a root context.
+.git
+.gitignore
+.venv
+venv
+node_modules
+.next
+.env
+.env.*
+.claude
+__pycache__
+*.pyc
+.pytest_cache
+DEVLOG.md

@@ -1,0 +1,40 @@
+# Production override — immutable images, no hot-reload, hardened session cookies.
+# Run:  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#       (or `make prod`). Expose with a Cloudflare Tunnel pointed at :3000:
+#       cloudflared tunnel --url http://localhost:3000
+#
+# Requires a real SECRET_KEY in .env (signs JWT session cookies). COOKIE_SECURE
+# defaults to true here, so cookies become HTTPS-only — correct behind the tunnel's
+# TLS. The database stays the bundled `db` service (DATABASE_URL is inherited from the
+# base compose); for a hosted Postgres, set DATABASE_URL + DB_SSL=true in .env and
+# uncomment the overrides below.
+services:
+  backend:
+    # !reset [] CLEARS the base bind-mount. A plain `volumes: []` would be APPENDED
+    # under Compose merge rules, leaving the ./backend:/app dev mount in place — so the
+    # image would not actually be immutable. !reset [] is the documented way to clear it.
+    volumes: !reset []
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    environment:
+      SECRET_KEY: ${SECRET_KEY}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      # For a hosted database, also set these in .env and uncomment:
+      # DATABASE_URL: ${DATABASE_URL}
+      # DB_SSL: ${DB_SSL:-true}
+    restart: always
+
+  frontend:
+    volumes: !reset []
+    command: sh -c "npm run build && npm run start"
+    environment:
+      NODE_ENV: production
+    restart: always
+    # Prod serves a precompiled build (next start), built at container boot — give the
+    # healthcheck a long grace period to cover that one-time build. (Baking `next build`
+    # into a multi-stage Dockerfile is the later cold-start optimization.)
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 180s

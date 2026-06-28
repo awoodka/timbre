@@ -4,17 +4,13 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/auth-context'
-import { getEmotionColor } from '@/components/emotionColors'
-import { getMediaType } from '@/components/mediaType'
+import { useRatings } from '@/lib/ratings-context'
+import FindControls from '@/components/FindControls'
+import Shelf from '@/components/Shelf'
+import ShelfCard from '@/components/ShelfCard'
 
 const TAGLINE =
   'Discover books, films, games, and more by how they make you feel — not by genre.'
-
-// Evocative moods shown first; only those actually present in the corpus are used.
-const PREFERRED_MOODS = [
-  'wonder', 'melancholy', 'warmth', 'dread', 'nostalgia',
-  'tension', 'joy', 'hope', 'isolation', 'serenity', 'grief', 'intimacy', 'vastness',
-]
 
 // Fisher–Yates; runs client-side only (after the data fetch), so no SSR/hydration drift.
 function shuffle(arr) {
@@ -27,47 +23,23 @@ function shuffle(arr) {
 }
 
 export default function Home() {
-  // The home page is public and viewable by everyone (the logo brings signed-in
-  // users back here); login/signup is what lands them on /recommendations, not a redirect.
+  // The home page is public. Anyone can describe a feeling and see real matches
+  // before signing up; login is what lands them on /recommendations, not a redirect.
   const { user } = useAuth()
+  const { results } = useRatings()
   const [items, setItems] = useState([])
-  const [loaded, setLoaded] = useState(false)
-  const [mood, setMood] = useState(null)
 
   useEffect(() => {
     api.getMedia()
       .then((all) => setItems(all.filter((i) => i.analysis_status === 'completed')))
       .catch(() => {})
-      .finally(() => setLoaded(true))
   }, [])
 
-  // Band covers: only items that actually have a cover, across all media, freshly
-  // shuffled each load so it's a different collection every visit.
+  // Band covers: only items that actually have a cover, freshly shuffled each load.
   const bandCovers = useMemo(
     () => shuffle(items.filter((i) => i.cover_image_url)).slice(0, 24),
     [items]
   )
-
-  // Moods to offer: preferred order intersected with dimensions present in the data.
-  const moods = useMemo(() => {
-    const present = new Set()
-    items.forEach((i) =>
-      i.emotion_breakdown && Object.keys(i.emotion_breakdown).forEach((k) => present.add(k))
-    )
-    const ordered = PREFERRED_MOODS.filter((m) => present.has(m))
-    return (ordered.length ? ordered : [...present].sort()).slice(0, 10)
-  }, [items])
-
-  const activeMood = mood || moods[0] || null
-
-  // A handful of works (with covers) that strongly evoke the active mood, across media.
-  const moodMatches = useMemo(() => {
-    if (!activeMood) return []
-    const hits = items.filter(
-      (i) => i.cover_image_url && (i.emotion_breakdown?.[activeMood] ?? 0) >= 0.5
-    )
-    return shuffle(hits).slice(0, 6)
-  }, [items, activeMood])
 
   return (
     <div className="landing">
@@ -75,10 +47,9 @@ export default function Home() {
         <h1 className="hero-title">Timbre</h1>
         <p className="hero-tagline">{TAGLINE}</p>
         <div className="hero-cta">
-          {user
-            ? <Link href="/ratings" className="btn">Start rating →</Link>
-            : <Link href="/login" className="btn">Get started →</Link>}
-          <Link href="/catalogue" className="btn-ghost">Browse the catalogue</Link>
+          <a href="#discover" className="btn">Describe a feeling →</a>
+          <Link href="/explore" className="btn-ghost">Explore the map</Link>
+          {!user && <Link href="/login" className="btn-ghost">Sign in</Link>}
         </div>
       </section>
 
@@ -101,6 +72,37 @@ export default function Home() {
         )}
       </section>
 
+      {/* The core magic, open to anyone: describe a feeling → real matches. */}
+      <section id="discover" className="discover">
+        <h2 className="landing-h2">Find something by how it feels</h2>
+        <p className="discover-sub">
+          Describe a mood or a moment — Timbre reads the feeling and finds works
+          that evoke it, across every medium.
+        </p>
+        <FindControls defaultActive="describe" />
+
+        {results && results.length > 0 && (
+          <section className="rec-row discover-results" aria-label="From your search">
+            <div className="rec-row-head">
+              <h3>What that feels like</h3>
+              <span className="rec-row-sub">Matched to your search</span>
+            </div>
+            <Shelf>
+              {results.map((r) => <ShelfCard key={r.item.id} item={r.item} reasons={r.reasons} />)}
+            </Shelf>
+            {!user && (
+              <p className="discover-convert">
+                <Link href="/login">Sign up to save these + unlock personalized picks →</Link>
+              </p>
+            )}
+          </section>
+        )}
+
+        <p className="discover-explore">
+          Or wander the whole emotional map — <Link href="/explore">explore in 3D →</Link>
+        </p>
+      </section>
+
       <section className="how">
         <h2 className="landing-h2">How it works</h2>
         <div className="how-steps">
@@ -119,55 +121,6 @@ export default function Home() {
             <h3>Get matches across media</h3>
             <p>Discover works that evoke the same feeling — a game that feels like your favorite novel.</p>
           </div>
-        </div>
-      </section>
-
-      <section className="mood-explore">
-        <h2 className="landing-h2">Explore by feeling</h2>
-        <p className="mood-sub">Pick a mood — see what evokes it, across every medium.</p>
-        <div className="mood-chips">
-          {moods.map((m) => {
-            const c = getEmotionColor(m)
-            const on = m === activeMood
-            return (
-              <button
-                key={m}
-                className={`mood-chip-btn${on ? ' on' : ''}`}
-                onClick={() => setMood(m)}
-                style={on
-                  ? { background: c.color, borderColor: c.color, color: '#fff' }
-                  : { borderColor: c.color, color: c.color }}
-              >
-                {m.replace(/_/g, ' ')}
-              </button>
-            )
-          })}
-        </div>
-        <div className="mood-results">
-          {moodMatches.map((item) => {
-            const t = getMediaType(item.medium)
-            return (
-              <Link
-                key={item.id}
-                href={`/book/${item.id}`}
-                className="mood-card"
-                title={`${item.title} — ${item.creator}`}
-              >
-                <img
-                  src={item.cover_image_url}
-                  alt=""
-                  className="mood-card-cover"
-                  loading="lazy"
-                  style={{ borderColor: t.color }}
-                />
-                <span className="mood-card-title">{item.title}</span>
-                <span className="mood-card-medium" style={{ color: t.color }}>{t.label}</span>
-              </Link>
-            )
-          })}
-          {loaded && activeMood && moodMatches.length === 0 && (
-            <p className="mood-empty">Nothing loaded for this mood yet.</p>
-          )}
         </div>
       </section>
 

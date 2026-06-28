@@ -1,9 +1,11 @@
+from datetime import datetime, timezone
+
 import numpy as np
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import get_current_user
+from app.auth import get_optional_user
 from app.database import get_db
 from app.dimensions import DIMENSION_KEYS, EMOTIONAL_DIMENSIONS, NUM_DIMENSIONS
 from app.models.media import MediaItem
@@ -59,12 +61,41 @@ _NAME = {d["key"]: d["name"] for d in EMOTIONAL_DIMENSIONS}
 # Raw ending_valence, coalesced to neutral for any malformed/missing breakdown.
 _EV = "COALESCE((emotion_breakdown->>'ending_valence')::float, 0.5)"
 
+# Anonymous natural-language (Gemini) searches are free up to FREE_ANON_NL per IP per
+# day, then we ask for sign-up. Soft cost guard: in-memory ⇒ per-worker + resets on
+# restart — fine at friends-scale; move to a shared store (DB/Redis) to make it exact.
+FREE_ANON_NL = 3
+_anon_nl: dict[str, tuple[str, int]] = {}  # ip -> (date_str, count)
+
+
+def _client_ip(request: Request) -> str:
+    """Best-effort client IP — prefers Cloudflare / proxy headers, falls back to peer."""
+    cf = request.headers.get("cf-connecting-ip")
+    if cf:
+        return cf.strip()
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _anon_nl_over_cap(ip: str) -> bool:
+    """Count one anon NL search for `ip` today; True once it exceeds FREE_ANON_NL."""
+    today = datetime.now(timezone.utc).date().isoformat()
+    day, count = _anon_nl.get(ip, (today, 0))
+    if day != today:
+        count = 0
+    count += 1
+    _anon_nl[ip] = (today, count)
+    return count > FREE_ANON_NL
+
 
 @router.post("/recommend", response_model=RecommendResponse)
 async def recommend_media(
     req: RecommendRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User | None = Depends(get_optional_user),
 ):
     """Recommend works by emotional fit. Two modes share this endpoint:
 
@@ -79,7 +110,12 @@ async def recommend_media(
     vectors; experience search additionally leans the result toward the requested
     ending via a soft penalty on each work's raw ending_valence.
     """
-    rows = list(await db.scalars(select(Rating).where(Rating.user_id == user.id)))
+    rows = [] if user is None else list(await db.scalars(select(Rating).where(Rating.user_id == user.id)))
+
+    # Anonymous free-text (Gemini) searches are free up to FREE_ANON_NL/day per IP,
+    # then we ask them to sign up — protects the API key + nudges accounts.
+    if user is None and req.description and _anon_nl_over_cap(_client_ip(request)):
+        return RecommendResponse(signup_required=True)
 
     # Natural-language search: parse the free-text description into the same
     # structured query the composer produces (feelings to seek/avoid, an ending,

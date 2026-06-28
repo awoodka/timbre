@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     db_ssl: bool = False
     # Auth: secret for signing JWT session cookies (override in prod via SECRET_KEY)
     secret_key: str = "dev-insecure-change-me-in-production"
+    # HTTPS-only session cookies. False for local http dev; set COOKIE_SECURE=true in
+    # prod (behind the tunnel's TLS) so the cookie is never sent over plain http.
+    cookie_secure: bool = False
     access_token_ttl_days: int = 30
 
     model_config = {"env_file": str(_env_file)}

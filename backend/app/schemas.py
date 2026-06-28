@@ -81,6 +81,7 @@ class MediaSimilarResponse(BaseModel):
 
 class RecommendResponse(BaseModel):
     gated: bool = False        # true when the user hasn't logged enough works yet
+    signup_required: bool = False  # anon hit the free natural-language search cap
     logged: int = 0
     needed: int = 0
     recommendations: list[MediaSimilarResponse] = []

@@ -1,0 +1,9 @@
+# Build context = ./frontend. node_modules + .next are large and host-specific —
+# deps are reinstalled in the image, so never ship them in the build context.
+node_modules
+.next
+npm-debug.log*
+.env
+.env.*
+Dockerfile
+.dockerignore

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { api } from '@/lib/api'
+import { useAuth } from '@/lib/auth-context'
 import BookCover from '@/components/BookCover'
 import { getEmotionColor } from '@/components/emotionColors'
 import { getMediaType } from '@/components/mediaType'
@@ -55,6 +56,7 @@ const SHELF = [
 const MEDIA_PILLS = SHELF.filter((s) => s.key !== 'all')
 
 export default function Catalogue() {
+  const { user } = useAuth()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null) // null => shelf view
@@ -110,9 +112,13 @@ export default function Catalogue() {
         <div className="page-header">
           <h1>The Shelf</h1>
           <p>{items.length} works · by feeling, not genre</p>
-          <button className="catalogue-add-btn" style={{ marginTop: '0.6rem' }} onClick={() => { setSelected('all'); setAdding(true) }}>+ Add a work</button>
+          {user ? (
+            <button className="catalogue-add-btn" style={{ marginTop: '0.6rem' }} onClick={() => { setSelected('all'); setAdding(true) }}>+ Add a work</button>
+          ) : (
+            <Link href="/login" className="catalogue-add-signin" style={{ marginTop: '0.6rem' }}>Sign in to add a work →</Link>
+          )}
         </div>
-        {adding && (
+        {user && adding && (
           <div className="add-panel add-panel-floating">
             <AddMediaFlow existing={items} onComplete={handleAddComplete} onCancel={() => setAdding(false)} />
           </div>
@@ -212,10 +218,14 @@ export default function Catalogue() {
             mood: {mood.replace(/_/g, ' ')} ✕
           </button>
         )}
-        <button className="catalogue-add-btn" style={{ marginLeft: 'auto' }} onClick={() => setAdding(true)}>+ Add a work</button>
+        {user ? (
+          <button className="catalogue-add-btn" style={{ marginLeft: 'auto' }} onClick={() => setAdding(true)}>+ Add a work</button>
+        ) : (
+          <Link href="/login" className="catalogue-add-signin" style={{ marginLeft: 'auto' }}>Sign in to add a work →</Link>
+        )}
       </div>
 
-      {adding && (
+      {user && adding && (
         <div className="add-panel add-panel-floating">
           <AddMediaFlow existing={items} onComplete={handleAddComplete} onCancel={() => setAdding(false)} />
         </div>

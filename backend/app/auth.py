@@ -44,7 +44,7 @@ def set_auth_cookie(response: Response, token: str) -> None:
         value=token,
         httponly=True,
         samesite="lax",
-        secure=False,  # local http; set True behind https in prod
+        secure=settings.cookie_secure,  # local http=False; COOKIE_SECURE=true behind https in prod
         max_age=settings.access_token_ttl_days * 86400,
         path="/",
     )

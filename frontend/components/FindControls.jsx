@@ -6,8 +6,8 @@ import MoodComposer from '@/components/MoodComposer'
 
 // Two compact pills that expand a single panel inline — content-first, so the
 // recommendation shelves lead and the search/compose tools stay quiet until needed.
-export default function FindControls() {
-  const [active, setActive] = useState(null) // 'describe' | 'compose' | null
+export default function FindControls({ defaultActive = null }) {
+  const [active, setActive] = useState(defaultActive) // 'describe' | 'compose' | null
   const toggle = (k) => setActive((cur) => (cur === k ? null : k))
 
   return (
