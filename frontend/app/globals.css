@@ -1955,6 +1955,7 @@ button:disabled {
 .rec-row-head { display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.6rem; }
 .rec-row-head h2 { font-size: 1.15rem; font-weight: 600; margin: 0; }
 .rec-row-sub { font-size: 0.85rem; color: var(--text-muted); }
+.rec-row-emotions { margin: 0; align-self: center; }
 
 /* Horizontal scroll arrows on a shelf */
 .shelf { position: relative; }

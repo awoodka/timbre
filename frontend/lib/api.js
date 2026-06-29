@@ -38,6 +38,8 @@ export const api = {
   // mood/ending/medium query server-side. One round-trip → ranked recs.
   recommendNL: ({ description, limit = 12 } = {}) =>
     request('/recommend', { method: 'POST', body: JSON.stringify({ description, limit }) }),
+  // Multi-modal taste: cluster the user's loved works into "modes" and recommend per mode.
+  recommendModes: () => request('/recommend/modes', { method: 'POST', body: '{}' }),
   getDimensions: () => request('/dimensions'),
   getProjection: (method = 'umap') => request(`/projection?method=${method}`),
 

@@ -19,8 +19,9 @@ function Recommendations() {
   const { saved } = useSaves()
   const [mediaById, setMediaById] = useState({})
   const [mediaLoaded, setMediaLoaded] = useState(false)
+  const [modes, setModes] = useState(null)
 
-  // Fetch the corpus once to label "Because you loved {title}" rows.
+  // Fetch the corpus once (resolves the saved-items shelf; powers the secondary rows).
   useEffect(() => {
     api.getMedia()
       .then((list) => setMediaById(Object.fromEntries(list.map((x) => [x.id, x]))))
@@ -29,9 +30,20 @@ function Recommendations() {
   }, [])
 
   const n = ratings.length
+
+  // Multi-modal taste rows: cluster the user's loved works into emotional "modes."
+  // Re-fetch when the rating count changes (a new rating can reshape the modes).
+  useEffect(() => {
+    if (n >= MIN_LOGGED) {
+      api.recommendModes().then((r) => setModes(r.modes || [])).catch(() => setModes([]))
+    } else {
+      setModes([])
+    }
+  }, [n])
+
   const rows = useMemo(
-    () => (mediaLoaded ? buildRows({ ratings, mediaById }) : []),
-    [ratings, mediaById, mediaLoaded]
+    () => (mediaLoaded ? buildRows({ ratings }) : []),
+    [ratings, mediaLoaded]
   )
   // Saved works (newest-first), resolved against the loaded corpus — the "On your list" shelf.
   const savedItems = useMemo(
@@ -81,9 +93,19 @@ function Recommendations() {
 
       {n > 0 && n < MIN_LOGGED && (
         <p className="gate-msg">
-          Rate {MIN_LOGGED - n} more {MIN_LOGGED - n === 1 ? 'work' : 'works'} to unlock your Top Picks.
+          Rate {MIN_LOGGED - n} more {MIN_LOGGED - n === 1 ? 'work' : 'works'} to unlock your personalized picks.
         </p>
       )}
+
+      {modes?.map((m) => (
+        <RecRow
+          key={m.id}
+          title={`Because you loved ${m.anchor_title}`}
+          subtitle="More with the same feeling"
+          emotions={m.emotions}
+          fetcher={() => Promise.resolve(m.recommendations)}
+        />
+      ))}
 
       {!mediaLoaded ? (
         <div className="loading"><span className="spinner" /> Loading…</div>

@@ -104,6 +104,23 @@ class RecommendResponse(BaseModel):
     recommendations: list[MediaSimilarResponse] = []
 
 
+class ModeOut(BaseModel):
+    # One taste "mode" = a cluster of the user's loved works, labeled by an anchor work
+    # + its defining emotions, with its own (MMR-diversified) recommendations.
+    id: str
+    anchor_id: str
+    anchor_title: str
+    emotions: list[str] = []
+    recommendations: list[MediaSimilarResponse] = []
+
+
+class RecommendModesResponse(BaseModel):
+    gated: bool = False
+    logged: int = 0
+    needed: int = 0
+    modes: list[ModeOut] = []
+
+
 class RecommendRequest(BaseModel):
     # Recommendations are computed from the user's stored feedback (server-side),
     # so the body only carries how many to return.

@@ -5,15 +5,17 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import get_optional_user
+from app.auth import get_current_user, get_optional_user
 from app.database import get_db
-from app.dimensions import DIMENSION_KEYS, EMOTIONAL_DIMENSIONS, NUM_DIMENSIONS
+from app.dimensions import DIMENSION_KEYS, EMOTIONAL_DIMENSIONS, FELT_KEYS, NUM_DIMENSIONS
 from app.models.media import MediaItem
 from app.models.user import Rating, User
 from app.schemas import (
     MediaResponse,
     MediaSimilarResponse,
+    ModeOut,
     ReasonOut,
+    RecommendModesResponse,
     RecommendRequest,
     RecommendResponse,
 )
@@ -21,6 +23,7 @@ from app.services.affinity import build_affinity, confidence, genres_of, rerank
 from app.services.feedback import build_taste_profile
 from app.services.mood import blend_vectors, build_mood_vector
 from app.services.query_parse import parse_query
+from app.services.taste_modes import cluster_taste_modes, mmr_rerank
 
 router = APIRouter(prefix="/api", tags=["recommendations"])
 
@@ -38,6 +41,13 @@ REASON_THRESHOLD = 0.5
 # (retrieval + the dominant term). See services/affinity.py.
 ENJOY_LAMBDA = 0.08
 RERANK_POOL = 50  # emotional candidates to consider before the gentle re-rank
+
+# Multi-modal taste (POST /recommend/modes): cluster the user's LOVED works into
+# emotional modes and recommend per mode. "Loved" = a net-positive resonance; per mode
+# we retrieve a cosine pool then MMR-diversify down to MODE_LIMIT picks.
+LOVED_RESONANCE_MIN = 0.5
+MODE_POOL = 30
+MODE_LIMIT = 12
 
 # Experience search — soft ending lean. We don't hard-filter on how a work ends;
 # instead the ranking subtracts a small penalty proportional to the distance between
@@ -274,3 +284,137 @@ async def _rank(db, query_vec, rated_ids, ending, limit, medium=None, affinity=N
     table, overall, conf = affinity
     candidates = [(r[0], float(r[1]), r[2], r[3], genres_of(r[4])) for r in result]
     return rerank(candidates, table, overall, conf, ENJOY_LAMBDA)[:limit]
+
+
+# ── Multi-modal taste (POST /recommend/modes) ───────────────────────────────────
+
+async def _loved_works(db, user_id):
+    """The user's positively-rated works (resonance ≥ LOVED_RESONANCE_MIN) with their
+    standardized vector + raw breakdown — the points we cluster into taste modes."""
+    q = (
+        select(Rating.resonance, MediaItem)
+        .join(MediaItem, Rating.media_id == MediaItem.id)
+        .where(
+            Rating.user_id == user_id,
+            Rating.resonance >= LOVED_RESONANCE_MIN,
+            MediaItem.emotion_vector.isnot(None),
+        )
+    )
+    return [
+        {
+            "resonance": float(res),
+            "id": item.id,
+            "title": item.title,
+            "vector": list(item.emotion_vector),
+            "breakdown": item.emotion_breakdown or {},
+        }
+        for res, item in (await db.execute(q)).all()
+    ]
+
+
+def _mode_anchor(members, centroid):
+    """The loved work nearest the centroid → the mode's 'Because you loved X' anchor."""
+    return max(members, key=lambda lw: float(np.dot(lw["vector"], centroid)))
+
+
+def _mode_emotions(members, n=3):
+    """Top felt emotions of the cluster's mean raw breakdown — the mode's label chips."""
+    sums: dict[str, float] = {}
+    for lw in members:
+        for k, v in (lw["breakdown"] or {}).items():
+            if k in FELT_KEYS:
+                sums[k] = sums.get(k, 0.0) + v
+    ranked = sorted(sums, key=lambda k: -sums[k])
+    return [k for k in ranked[:n] if sums[k] / len(members) >= 0.4]
+
+
+async def _retrieve_pool(db, centroid, exclude_ids, pool):
+    """The `pool` corpus works nearest a mode centroid by cosine (excluding rated), as
+    (id, cosine) ordered — the same pgvector pattern `_rank` uses."""
+    exclude = ""
+    if exclude_ids:
+        placeholders = ", ".join(f"'{rid}'" for rid in exclude_ids)
+        exclude = f"AND id NOT IN ({placeholders})"
+    vec = "[" + ",".join(str(v) for v in centroid.tolist()) + "]"
+    query = text(
+        f"""
+        SELECT id, 1 - (emotion_vector <=> CAST(:vec AS vector)) AS similarity
+        FROM media
+        WHERE emotion_vector IS NOT NULL {exclude}
+        ORDER BY emotion_vector <=> CAST(:vec AS vector) ASC
+        LIMIT :pool
+        """
+    )
+    return (await db.execute(query, {"vec": vec, "pool": pool})).fetchall()
+
+
+async def _mode_recs(db, centroid, exclude_ids, emotions):
+    """Cosine pool near the centroid → MMR-diversify to MODE_LIMIT → rec cards
+    (similarity = cosine to the centroid; reasons = the mode's emotions each delivers)."""
+    pool = await _retrieve_pool(db, centroid, exclude_ids, MODE_POOL)
+    if not pool:
+        return []
+    pool_ids = [r[0] for r in pool]
+    sim_by_id = {r[0]: float(r[1]) for r in pool}
+    items = {m.id: m for m in (await db.scalars(select(MediaItem).where(MediaItem.id.in_(pool_ids)))).all()}
+    ordered = [items[i] for i in pool_ids if i in items]
+    vecs = np.array([list(it.emotion_vector) for it in ordered], dtype=np.float64)
+    emo_set = set(emotions)
+    recs = []
+    for j in mmr_rerank(vecs, np.asarray(centroid, dtype=np.float64), k=MODE_LIMIT):
+        item = ordered[j]
+        bd = item.emotion_breakdown or {}
+        reason_keys = sorted(
+            (k for k in emo_set if bd.get(k, 0) >= REASON_THRESHOLD),
+            key=lambda k: -bd.get(k, 0.0),
+        )[:3]
+        recs.append(
+            MediaSimilarResponse(
+                item=MediaResponse.from_orm_item(item),
+                similarity=round(sim_by_id[item.id], 4),
+                reasons=[ReasonOut(key=k, name=_NAME.get(k, k)) for k in reason_keys],
+            )
+        )
+    return recs
+
+
+@router.post("/recommend/modes", response_model=RecommendModesResponse)
+async def recommend_modes(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Multi-modal taste: cluster the user's loved works into 2–3 emotional "modes"
+    (k-means on the standardized vectors), recommend from each mode's resonance-weighted
+    center, and MMR-diversify each row. Each mode is labeled by an anchor work + its
+    defining emotions. Gated like pure taste; degrades to one mode for a coherent taste."""
+    rows = list(await db.scalars(select(Rating).where(Rating.user_id == user.id)))
+    if len(rows) < MIN_LOGGED_WORKS:
+        return RecommendModesResponse(gated=True, logged=len(rows), needed=MIN_LOGGED_WORKS)
+
+    loved = await _loved_works(db, user.id)
+    if not loved:
+        return RecommendModesResponse(logged=len(rows), needed=MIN_LOGGED_WORKS)
+
+    vectors = np.array([lw["vector"] for lw in loved], dtype=np.float64)
+    weights = np.array([lw["resonance"] for lw in loved], dtype=np.float64)
+    modes = cluster_taste_modes(vectors, weights)
+
+    rated_ids = {str(r.media_id) for r in rows}
+    out = []
+    for mode in modes:
+        members = [loved[i] for i in mode["indices"]]
+        emotions = _mode_emotions(members)
+        recs = await _mode_recs(db, mode["centroid"], rated_ids, emotions)
+        if not recs:
+            continue
+        anchor = _mode_anchor(members, mode["centroid"])
+        out.append(
+            ModeOut(
+                id=f"mode-{anchor['id']}",
+                anchor_id=str(anchor["id"]),
+                anchor_title=anchor["title"],
+                emotions=emotions,
+                recommendations=recs,
+            )
+        )
+    return RecommendModesResponse(logged=len(rows), needed=MIN_LOGGED_WORKS, modes=out)

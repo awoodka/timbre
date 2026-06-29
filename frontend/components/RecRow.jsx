@@ -3,11 +3,12 @@
 import { useEffect, useState } from 'react'
 import ShelfCard from '@/components/ShelfCard'
 import Shelf from '@/components/Shelf'
+import { getEmotionColor } from '@/components/emotionColors'
 
 // One Netflix-style row. Owns its own fetch so rows load independently and pop in
 // as they resolve. `fetcher` returns a normalized array of { item, reasons? }.
 // A row that resolves to empty (or errors, or is gated) renders nothing.
-export default function RecRow({ title, subtitle, fetcher }) {
+export default function RecRow({ title, subtitle, emotions, fetcher }) {
   const [items, setItems] = useState(null) // null = loading, [] = empty/hidden, [...] = loaded
 
   useEffect(() => {
@@ -28,6 +29,19 @@ export default function RecRow({ title, subtitle, fetcher }) {
       <div className="rec-row-head">
         <h2>{title}</h2>
         {subtitle && <span className="rec-row-sub">{subtitle}</span>}
+        {emotions?.length > 0 && (
+          <div className="reason-tags rec-row-emotions">
+            {emotions.map((k) => (
+              <span
+                key={k}
+                className="reason-tag"
+                style={{ background: getEmotionColor(k).bg, color: getEmotionColor(k).color }}
+              >
+                {k.replace(/_/g, ' ')}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
       <Shelf>
         {items === null

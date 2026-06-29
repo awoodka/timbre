@@ -29,38 +29,13 @@ const toMoodMap = ({ seek = [], avoid = [] }) => ({
 
 const recs = (p) => p.recommendations || []
 
-// Build the ordered, tier-filtered row descriptors for the recommendations page.
-// Rows that need taste (Top picks, Beyond books) only appear at >= 4 ratings;
-// "Because you loved X" needs >= 1; mood/arc rows are ungated (work at 0 ratings).
-export function buildRows({ ratings = [], mediaById = {} }) {
+// Build the secondary row descriptors for the recommendations page (mood + arc +
+// cross-media). The personalized taste rows ("Because you loved X — feelings") are the
+// multi-modal taste modes from /recommend/modes, rendered separately by the page.
+export function buildRows({ ratings = [] }) {
   const n = ratings.length
   const hasTaste = n > 0
   const rows = []
-
-  if (n >= 4) {
-    rows.push({
-      id: 'top-picks',
-      title: 'Top picks for you',
-      subtitle: 'Matched to your emotional taste',
-      fetcher: () => api.recommend(18).then(recs),
-    })
-  }
-
-  // Because you loved {title} — seed on resonance, nudged by enjoyment (works you
-  // both felt AND enjoyed make the best anchors), distinct, up to 3.
-  const seedScore = (r) => (r.resonance ?? 0.5) + 0.15 * (r.enjoyment ? (r.enjoyment - 3) / 2 : 0)
-  ;[...ratings]
-    .filter((r) => mediaById[r.media_id])
-    .sort((a, b) => seedScore(b) - seedScore(a))
-    .slice(0, 3)
-    .forEach((r) => {
-      rows.push({
-        id: `loved-${r.media_id}`,
-        title: `Because you loved ${mediaById[r.media_id].title}`,
-        subtitle: 'More with the same feeling',
-        fetcher: () => api.getSimilar(r.media_id, 18),
-      })
-    })
 
   // Mood rows — experience search (blends taste once available via alpha).
   Object.entries(PRESETS).forEach(([key, p]) => {
