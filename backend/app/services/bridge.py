@@ -16,12 +16,17 @@ _MARK_WORD = {2: "loved", 1: "liked", -1: "cooled on", -2: "didn't connect with"
 
 
 def _top_feelings(breakdown: dict, n: int = 4) -> list[str]:
-    """The work's strongest FELT emotions (excludes the bipolar axis dims)."""
+    """The work's strongest FELT emotions (excludes the bipolar axis dims). Prefers the
+    meaningfully-present ones (≥0.3) but always falls back to the top 2, so a work never
+    ends up described with no real feelings (no vague "distinct mood" filler)."""
     felt = sorted(
         ((k, v) for k, v in (breakdown or {}).items() if k in FELT_KEYS),
         key=lambda kv: -kv[1],
     )
-    return [k.replace("_", " ") for k, v in felt[:n] if v >= 0.4]
+    if not felt:
+        return []
+    picked = [k for k, v in felt[:n] if v >= 0.3] or [k for k, _ in felt[:2]]
+    return [k.replace("_", " ") for k in picked]
 
 
 def _neighbor_line(nb: dict) -> str:
@@ -50,10 +55,15 @@ In 2-3 warm, specific sentences, tell the reader (address them as "you") why "{i
 
 
 async def generate_bridge(item, neighbors: list[dict]) -> str:
-    """One Gemini Flash call → a short, ready-to-display explanation paragraph."""
+    """One Gemini Flash call → a short, ready-to-display explanation paragraph.
+
+    `max_output_tokens` is generous on purpose: gemini-2.5-flash *thinks* by default and
+    those (invisible) thinking tokens count against this budget — at 400 they ate almost
+    all of it and truncated the answer mid-sentence (finish_reason=MAX_TOKENS). The
+    installed SDK can't disable thinking, so we just leave ample room for it + the answer."""
     response = await client.aio.models.generate_content(
         model=MODEL,
         contents=build_prompt(item, neighbors),
-        config=types.GenerateContentConfig(max_output_tokens=400, temperature=0.8),
+        config=types.GenerateContentConfig(max_output_tokens=2048, temperature=0.8),
     )
     return (response.text or "").strip()
