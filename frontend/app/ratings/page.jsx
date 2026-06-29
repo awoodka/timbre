@@ -8,6 +8,7 @@ import { useSaves } from '@/lib/saves-context'
 import RequireAuth from '@/components/RequireAuth'
 import BookSearch from '@/components/BookSearch'
 import RatingItem from '@/components/RatingItem'
+import LoadError from '@/components/LoadError'
 import { getMediaType } from '@/components/mediaType'
 
 const MOOD_THRESHOLD = 0.5
@@ -20,10 +21,12 @@ const RESONANCE_BANDS = {
 const BAND_LABEL = { loved: 'Loved', liked: 'Liked', neutral: 'Neutral', 'not-for-me': 'Not for me' }
 
 function RatingsManager() {
-  const { ratings, rate, removeRating } = useRatings()
+  const { ratings, rate, removeRating, error: ratingsError, reload: reloadRatings } = useRatings()
   const { removeSave } = useSaves()
   const [books, setBooks] = useState([])
   const [booksLoading, setBooksLoading] = useState(true)
+  const [booksError, setBooksError] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
   const [search, setSearch] = useState('')
   const [types, setTypes] = useState([])
   const [mood, setMood] = useState('')
@@ -33,7 +36,11 @@ function RatingsManager() {
   const [editingId, setEditingId] = useState(null)
   const [confirmingDelete, setConfirmingDelete] = useState(null)
 
-  useEffect(() => { api.getMedia().then(setBooks).finally(() => setBooksLoading(false)) }, [])
+  useEffect(() => {
+    setBooksError(false); setBooksLoading(true)
+    api.getMedia().then(setBooks).catch(() => setBooksError(true)).finally(() => setBooksLoading(false))
+  }, [reloadKey])
+  const retry = () => { reloadRatings(); setReloadKey((k) => k + 1) }
   // Hydrate the saved view in an effect (never read localStorage during render → no SSR mismatch).
   useEffect(() => {
     const v = localStorage.getItem('timbre.ratingsView')
@@ -77,6 +84,8 @@ function RatingsManager() {
   }, [ratings, byId, search, types, mood, band, sort])
 
   if (booksLoading) return <div className="loading"><span className="spinner" /> Loading…</div>
+
+  if (booksError || ratingsError) return <LoadError onRetry={retry} />
 
   const itemProps = (x) => ({
     rating: x,

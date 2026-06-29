@@ -10,22 +10,27 @@ export function RatingsProvider({ children }) {
   const { user } = useAuth()
   const [ratings, setRatings] = useState([]) // [{ media_id, rating }]
   const [results, setResults] = useState(null)
+  const [error, setError] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
 
   // Load the signed-in user's ratings from the server; clear them on logout.
   useEffect(() => {
     let active = true
     setResults(null)
+    setError(false)
     if (user) {
       api.getRatings()
         .then((rows) => {
           if (active) setRatings(rows.map((r) => ({ media_id: r.media_id, feedback: r.feedback || {}, resonance: r.resonance ?? 0.5, enjoyment: r.enjoyment ?? null })))
         })
-        .catch(() => {})
+        .catch(() => { if (active) setError(true) })
     } else {
       setRatings([])
     }
     return () => { active = false }
-  }, [user])
+  }, [user, reloadKey])
+
+  const reload = useCallback(() => setReloadKey((k) => k + 1), [])
 
   // Add or update a rating. Persists to the account when signed in; otherwise
   // stays in-memory (anonymous, as before).
@@ -59,7 +64,7 @@ export function RatingsProvider({ children }) {
   }, [])
 
   return (
-    <RatingsContext.Provider value={{ ratings, setRatings, results, setResults, rate, removeRating, clearRatings }}>
+    <RatingsContext.Provider value={{ ratings, setRatings, results, setResults, rate, removeRating, clearRatings, error, reload }}>
       {children}
     </RatingsContext.Provider>
   )

@@ -1,5 +1,9 @@
-import Image from 'next/image'
+'use client'
 
+import { useState } from 'react'
+
+// Plain <img> (not next/image) on purpose: it's immune to the remote-host allowlist
+// and falls back to the placeholder on ANY load failure (404 / expired / odd host).
 export default function BookCover({ url, size = 'medium' }) {
   const sizes = {
     small: { width: 40, height: 60 },
@@ -7,17 +11,19 @@ export default function BookCover({ url, size = 'medium' }) {
     large: { width: 150, height: 225 },
   }
   const { width, height } = sizes[size] || sizes.medium
+  const [failed, setFailed] = useState(false)
 
-  if (url) {
+  if (url && !failed) {
     return (
-      <Image
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
         src={url}
         alt=""
         width={width}
         height={height}
         className="book-cover-img"
         loading="lazy"
-        unoptimized={false}
+        onError={() => setFailed(true)}
       />
     )
   }

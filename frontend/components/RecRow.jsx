@@ -8,7 +8,7 @@ import { getEmotionColor } from '@/components/emotionColors'
 // One Netflix-style row. Owns its own fetch so rows load independently and pop in
 // as they resolve. `fetcher` returns a normalized array of { item, reasons? }.
 // A row that resolves to empty (or errors, or is gated) renders nothing.
-export default function RecRow({ title, subtitle, emotions, fetcher }) {
+export default function RecRow({ title, subtitle, emotions, tuned, fetcher }) {
   const [items, setItems] = useState(null) // null = loading, [] = empty/hidden, [...] = loaded
 
   useEffect(() => {
@@ -28,6 +28,7 @@ export default function RecRow({ title, subtitle, emotions, fetcher }) {
     <section className="rec-row" aria-label={title}>
       <div className="rec-row-head">
         <h2>{title}</h2>
+        {tuned && <span className="rec-row-tuned">✨ tuned to you</span>}
         {subtitle && <span className="rec-row-sub">{subtitle}</span>}
         {emotions?.length > 0 && (
           <div className="reason-tags rec-row-emotions">

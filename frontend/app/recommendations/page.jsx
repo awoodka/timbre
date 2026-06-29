@@ -11,23 +11,27 @@ import ShelfCard from '@/components/ShelfCard'
 import Shelf from '@/components/Shelf'
 import FindControls from '@/components/FindControls'
 import { buildRows } from '@/lib/recommendationRows'
+import LoadError from '@/components/LoadError'
 
 const MIN_LOGGED = 4
 
 function Recommendations() {
   const { ratings, results } = useRatings()
-  const { saved } = useSaves()
+  const { saved, error: savesError, reload: reloadSaves } = useSaves()
   const [mediaById, setMediaById] = useState({})
   const [mediaLoaded, setMediaLoaded] = useState(false)
   const [modes, setModes] = useState(null)
+  const [error, setError] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
 
   // Fetch the corpus once (resolves the saved-items shelf; powers the secondary rows).
   useEffect(() => {
+    setError(false)
     api.getMedia()
       .then((list) => setMediaById(Object.fromEntries(list.map((x) => [x.id, x]))))
-      .catch(() => {})
+      .catch(() => setError(true))
       .finally(() => setMediaLoaded(true))
-  }, [])
+  }, [reloadKey])
 
   const n = ratings.length
 
@@ -35,15 +39,17 @@ function Recommendations() {
   // Re-fetch when the rating count changes (a new rating can reshape the modes).
   useEffect(() => {
     if (n >= MIN_LOGGED) {
-      api.recommendModes().then((r) => setModes(r.modes || [])).catch(() => setModes([]))
+      api.recommendModes().then((r) => setModes(r.modes || [])).catch(() => { setModes([]); setError(true) })
     } else {
       setModes([])
     }
-  }, [n])
+  }, [n, reloadKey])
+
+  const retry = () => { reloadSaves(); setError(false); setReloadKey((k) => k + 1) }
 
   const rows = useMemo(
-    () => (mediaLoaded ? buildRows({ ratings }) : []),
-    [ratings, mediaLoaded]
+    () => (mediaLoaded ? buildRows({ ratings, mediaById }) : []),
+    [ratings, mediaById, mediaLoaded]
   )
   // Saved works (newest-first), resolved against the loaded corpus — the "On your list" shelf.
   const savedItems = useMemo(
@@ -97,22 +103,28 @@ function Recommendations() {
         </p>
       )}
 
-      {modes?.map((m) => (
-        <RecRow
-          key={m.id}
-          title={`Because you loved ${m.anchor_title}`}
-          subtitle="More with the same feeling"
-          emotions={m.emotions}
-          fetcher={() => Promise.resolve(m.recommendations)}
-        />
-      ))}
-
-      {!mediaLoaded ? (
-        <div className="loading"><span className="spinner" /> Loading…</div>
+      {(error || savesError) ? (
+        <LoadError onRetry={retry} />
       ) : (
-        rows.map((row) => (
-          <RecRow key={row.id} title={row.title} subtitle={row.subtitle} fetcher={row.fetcher} />
-        ))
+        <>
+          {modes?.map((m) => (
+            <RecRow
+              key={m.id}
+              title={`Because you loved ${m.anchor_title}`}
+              subtitle="More with the same feeling"
+              emotions={m.emotions}
+              fetcher={() => Promise.resolve(m.recommendations)}
+            />
+          ))}
+
+          {!mediaLoaded ? (
+            <div className="loading"><span className="spinner" /> Loading…</div>
+          ) : (
+            rows.map((row) => (
+              <RecRow key={row.id} title={row.title} subtitle={row.subtitle} tuned={row.tuned} fetcher={row.fetcher} />
+            ))
+          )}
+        </>
       )}
     </div>
   )

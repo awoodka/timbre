@@ -427,6 +427,31 @@ body {
   width: 100%;
 }
 
+/* Mobile: the fixed-width spine row overflows a phone, so swap it for a category grid. */
+.shelf-grid-mobile { display: none; }
+.shelf-cat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  align-items: flex-start;
+  text-align: left;
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--spine);
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.shelf-cat-label { font-weight: 600; color: var(--text); }
+.shelf-cat-count { font-size: 0.8rem; color: var(--text-muted); }
+
+@media (max-width: 720px) {
+  .shelf-stage { display: none; }
+  .shelf-view { justify-content: flex-start; min-height: auto; }
+  .shelf-grid-mobile { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+}
+
 /* Grid head (after a shelf is chosen) */
 .catalogue-gridhead {
   display: flex;
@@ -611,6 +636,40 @@ button:disabled {
   font-weight: 500;
 }
 .nav-logout:hover { background: var(--surface-hover); color: var(--text); }
+
+/* Hamburger — hidden on desktop; the nav collapses to a dropdown ≤720px. */
+.nav-toggle {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 0.4rem;
+  cursor: pointer;
+}
+.nav-toggle span { width: 22px; height: 2px; background: var(--text); border-radius: 2px; }
+
+@media (max-width: 720px) {
+  .nav-toggle { display: flex; }
+  .nav-links {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    padding: 0.25rem 2rem 1rem;
+    display: none;
+  }
+  .nav-links.open { display: flex; }
+  .nav-links > a,
+  .nav-links .nav-user { padding: 0.7rem 0; border-top: 1px solid var(--border); }
+  .nav-user { justify-content: space-between; }
+}
 
 .auth-page {
   display: flex;
@@ -1076,6 +1135,16 @@ button:disabled {
   text-align: center;
   padding: 3rem;
   color: var(--text-muted);
+}
+
+.load-error {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--error);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
 }
 
 .spinner {
@@ -1956,6 +2025,16 @@ button:disabled {
 .rec-row-head h2 { font-size: 1.15rem; font-weight: 600; margin: 0; }
 .rec-row-sub { font-size: 0.85rem; color: var(--text-muted); }
 .rec-row-emotions { margin: 0; align-self: center; }
+.rec-row-tuned {
+  align-self: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-light);
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
 
 /* Horizontal scroll arrows on a shelf */
 .shelf { position: relative; }

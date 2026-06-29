@@ -7,6 +7,7 @@ import { useRatings } from '@/lib/ratings-context'
 import RequireAuth from '@/components/RequireAuth'
 import BookCover from '@/components/BookCover'
 import FingerprintAura from '@/components/FingerprintAura'
+import LoadError from '@/components/LoadError'
 import { getEmotionColor } from '@/components/emotionColors'
 import { getMediaType, MEDIA_TYPES } from '@/components/mediaType'
 import {
@@ -92,16 +93,21 @@ function EnjoyBars({ rows, label }) {
 }
 
 function Fingerprint() {
-  const { ratings } = useRatings()
+  const { ratings, error: ratingsError, reload: reloadRatings } = useRatings()
   const [byId, setById] = useState({})
   const [loaded, setLoaded] = useState(false)
+  const [error, setError] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
+    setError(false); setLoaded(false)
     api.getMedia()
       .then((list) => setById(Object.fromEntries(list.map((x) => [x.id, x]))))
-      .catch(() => {})
+      .catch(() => setError(true))
       .finally(() => setLoaded(true))
-  }, [])
+  }, [reloadKey])
+
+  const retry = () => { reloadRatings(); setReloadKey((k) => k + 1) }
 
   const ratedWorks = useMemo(
     () => ratings.map((r) => ({ ...r, book: byId[r.media_id] })).filter((x) => x.book),
@@ -122,6 +128,8 @@ function Fingerprint() {
   const enjoyStats = useMemo(() => enjoymentStats(ratings), [ratings])
 
   if (!loaded) return <div className="loading"><span className="spinner" /> Loading…</div>
+
+  if (error || ratingsError) return <LoadError onRetry={retry} />
 
   if (ratings.length === 0) {
     return (

@@ -11,18 +11,23 @@ const SavesContext = createContext(null)
 export function SavesProvider({ children }) {
   const { user } = useAuth()
   const [saved, setSaved] = useState([]) // [media_id, ...], newest first
+  const [error, setError] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     let active = true
+    setError(false)
     if (user) {
       api.getSaves()
         .then((rows) => { if (active) setSaved(rows.map((r) => r.media_id)) })
-        .catch(() => {})
+        .catch(() => { if (active) setError(true) })
     } else {
       setSaved([])
     }
     return () => { active = false }
-  }, [user])
+  }, [user, reloadKey])
+
+  const reload = useCallback(() => setReloadKey((k) => k + 1), [])
 
   const addSave = useCallback((mediaId) => {
     setSaved((prev) => (prev.includes(mediaId) ? prev : [mediaId, ...prev]))
@@ -37,7 +42,7 @@ export function SavesProvider({ children }) {
   const isSaved = useCallback((mediaId) => saved.includes(mediaId), [saved])
 
   return (
-    <SavesContext.Provider value={{ saved, addSave, removeSave, isSaved }}>
+    <SavesContext.Provider value={{ saved, addSave, removeSave, isSaved, error, reload }}>
       {children}
     </SavesContext.Provider>
   )

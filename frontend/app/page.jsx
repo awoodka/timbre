@@ -64,6 +64,7 @@ export default function Home() {
                 alt=""
                 className="band-cover"
                 loading="lazy"
+                onError={(e) => { e.currentTarget.style.visibility = 'hidden' }}
               />
             ))}
           </div>

@@ -9,6 +9,7 @@ import { getEmotionColor } from '@/components/emotionColors'
 import { getMediaType } from '@/components/mediaType'
 import SaveButton from '@/components/SaveButton'
 import AddMediaFlow from '@/components/AddMediaFlow'
+import LoadError from '@/components/LoadError'
 
 const MOOD_THRESHOLD = 0.5
 
@@ -65,10 +66,14 @@ export default function Catalogue() {
   const [sort, setSort] = useState('recent')
   const [types, setTypes] = useState([]) // multi-select media subset, only used on the All view
   const [adding, setAdding] = useState(false)
+  const [error, setError] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
-    api.getMedia().then(setItems).finally(() => setLoading(false))
-  }, [])
+    setError(false); setLoading(true)
+    api.getMedia().then(setItems).catch(() => setError(true)).finally(() => setLoading(false))
+  }, [reloadKey])
+  const retry = () => setReloadKey((k) => k + 1)
 
   // A freshly-added work (post-analysis) → fold it into the catalogue so it just appears.
   const handleAddComplete = (item) => {
@@ -99,6 +104,8 @@ export default function Catalogue() {
   }, [items])
 
   if (loading) return <div className="loading"><span className="spinner" /> Loading catalogue...</div>
+
+  if (error) return <LoadError onRetry={retry} />
 
   const totals = SHELF.reduce((acc, s) => {
     acc[s.key] = s.key === 'all' ? items.length : items.filter((i) => i.medium === s.key).length
@@ -139,6 +146,19 @@ export default function Catalogue() {
             ))}
           </div>
           <div className="shelf-board" />
+        </div>
+        <div className="shelf-grid-mobile">
+          {SHELF.map((s) => (
+            <button
+              key={s.key}
+              className="shelf-cat"
+              style={{ '--spine': s.key === 'all' ? '#262220' : getMediaType(s.key).color }}
+              onClick={() => setSelected(s.key)}
+            >
+              <span className="shelf-cat-label">{s.label}</span>
+              <span className="shelf-cat-count">{totals[s.key]}</span>
+            </button>
+          ))}
         </div>
       </div>
     )

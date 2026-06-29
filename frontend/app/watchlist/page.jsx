@@ -6,18 +6,24 @@ import { api } from '@/lib/api'
 import { useSaves } from '@/lib/saves-context'
 import RequireAuth from '@/components/RequireAuth'
 import ShelfCard from '@/components/ShelfCard'
+import LoadError from '@/components/LoadError'
 
 function Watchlist() {
-  const { saved } = useSaves()
+  const { saved, error: savesError, reload: reloadSaves } = useSaves()
   const [mediaById, setMediaById] = useState({})
   const [loaded, setLoaded] = useState(false)
+  const [error, setError] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
+    setError(false); setLoaded(false)
     api.getMedia()
       .then((list) => setMediaById(Object.fromEntries(list.map((x) => [x.id, x]))))
-      .catch(() => {})
+      .catch(() => setError(true))
       .finally(() => setLoaded(true))
-  }, [])
+  }, [reloadKey])
+
+  const retry = () => { reloadSaves(); setReloadKey((k) => k + 1) }
 
   // `saved` is newest-first; keep that order and drop any unresolved ids.
   const items = useMemo(
@@ -34,6 +40,8 @@ function Watchlist() {
 
       {!loaded ? (
         <div className="loading"><span className="spinner" /> Loading…</div>
+      ) : (error || savesError) ? (
+        <LoadError onRetry={retry} />
       ) : items.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
           <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Your list is empty</p>
