@@ -24,6 +24,8 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://mediafingerprint:mediafingerprint@db:5432/mediafingerprint
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      TMDB_API_KEY: ${TMDB_API_KEY}
+      RAWG_API_KEY: ${RAWG_API_KEY}
     depends_on:
       db:
         condition: service_healthy
