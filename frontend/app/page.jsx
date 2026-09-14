@@ -109,7 +109,7 @@ export default function Home() {
         <div className="how-steps">
           <div className="how-step">
             <span className="how-num">1</span>
-            <h3>Rate what's moved you</h3>
+            <h3>Rate what&apos;s moved you</h3>
             <p>Books, films, shows, anime, manga, games — anything that left a mark.</p>
           </div>
           <div className="how-step">
