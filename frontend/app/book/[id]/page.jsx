@@ -10,6 +10,7 @@ import EmotionBar from '@/components/EmotionBar'
 import SaveButton from '@/components/SaveButton'
 import EmotionFeedback from '@/components/EmotionFeedback'
 import StarRating from '@/components/StarRating'
+import ProfileText from '@/components/ProfileText'
 import { useAuth } from '@/lib/auth-context'
 import { useRatings } from '@/lib/ratings-context'
 import { useSaves } from '@/lib/saves-context'
@@ -159,7 +160,7 @@ export default function BookDetail() {
       {book.description && (
         <>
           <h2 className="section-title">Emotional Profile</h2>
-          <div className="description">{book.description}</div>
+          <div className="description"><ProfileText text={book.description} /></div>
         </>
       )}
 

@@ -497,6 +497,7 @@ body {
 }
 
 .book-detail .description {
+  white-space: pre-line; /* keep the profile's paragraphs and its closing summary lines */
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
