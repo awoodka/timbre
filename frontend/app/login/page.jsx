@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 
@@ -13,6 +13,12 @@ export default function LoginPage() {
   const [displayName, setDisplayName] = useState('')
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
+
+  // Links like /login?mode=signup open straight onto the sign-up form. Read from
+  // window rather than useSearchParams so the page doesn't need a Suspense boundary.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('mode') === 'signup') setMode('signup')
+  }, [])
 
   const submit = async (e) => {
     e.preventDefault()

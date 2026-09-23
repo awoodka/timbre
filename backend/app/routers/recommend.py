@@ -23,6 +23,7 @@ from app.services.affinity import build_affinity, confidence, genres_of, rerank
 from app.services.feedback import build_taste_profile
 from app.services.mood import blend_vectors, build_mood_vector
 from app.services.query_parse import parse_query
+from app.services.quota import charge_ai, client_ip
 from app.services.taste_modes import cluster_taste_modes, mmr_rerank
 
 router = APIRouter(prefix="/api", tags=["recommendations"])
@@ -78,17 +79,6 @@ FREE_ANON_NL = 3
 _anon_nl: dict[str, tuple[str, int]] = {}  # ip -> (date_str, count)
 
 
-def _client_ip(request: Request) -> str:
-    """Best-effort client IP — prefers Cloudflare / proxy headers, falls back to peer."""
-    cf = request.headers.get("cf-connecting-ip")
-    if cf:
-        return cf.strip()
-    xff = request.headers.get("x-forwarded-for")
-    if xff:
-        return xff.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
-
-
 def _anon_nl_over_cap(ip: str) -> bool:
     """Count one anon NL search for `ip` today; True once it exceeds FREE_ANON_NL."""
     today = datetime.now(timezone.utc).date().isoformat()
@@ -124,7 +114,7 @@ async def recommend_media(
 
     # Anonymous free-text (Gemini) searches are free up to FREE_ANON_NL/day per IP,
     # then we ask them to sign up — protects the API key + nudges accounts.
-    if user is None and req.description and _anon_nl_over_cap(_client_ip(request)):
+    if user is None and req.description and _anon_nl_over_cap(client_ip(request)):
         return RecommendResponse(signup_required=True)
 
     # Natural-language search: parse the free-text description into the same
@@ -132,6 +122,7 @@ async def recommend_media(
     # an optional medium), leaning toward the query over saved taste (NL_ALPHA).
     mood, ending, medium, alpha = req.mood, req.ending, req.medium, req.alpha
     if req.description:
+        await charge_ai(db, "search", user)  # per-account allowance + the site-wide total
         parsed = await parse_query(req.description)
         mood, ending, medium, alpha = parsed["mood"], parsed["ending"], parsed["medium"], NL_ALPHA
         if not mood and ending == "any" and not medium:

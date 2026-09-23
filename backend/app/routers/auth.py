@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,15 +23,19 @@ from app.schemas import (
     UserUpdate,
 )
 from app.services.feedback import build_taste_profile
+from app.services.quota import charge_signup
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 @router.post("/signup", response_model=UserResponse)
-async def signup(data: UserCreate, response: Response, db: AsyncSession = Depends(get_db)):
+async def signup(
+    data: UserCreate, request: Request, response: Response, db: AsyncSession = Depends(get_db)
+):
     existing = await db.scalar(select(User).where(User.username == data.username))
     if existing:
         raise HTTPException(status_code=409, detail="Username already taken")
+    await charge_signup(db, request)
     user = User(
         username=data.username,
         password_hash=hash_password(data.password),

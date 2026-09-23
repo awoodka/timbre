@@ -22,6 +22,7 @@ from app.schemas import (
 )
 from app.services.bridge import generate_bridge
 from app.services.emotional_analysis import analyze_media
+from app.services.quota import charge_ai
 from app.services.sources import lookup_metadata
 
 logger = logging.getLogger(__name__)
@@ -65,6 +66,7 @@ async def create_media(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    await charge_ai(db, "add", user)
     item = MediaItem(
         medium=item_in.medium,
         title=item_in.title,
@@ -170,6 +172,7 @@ async def reanalyze_media(
     item = await db.get(MediaItem, media_id)
     if not item:
         raise HTTPException(status_code=404, detail="Media item not found")
+    await charge_ai(db, "add", user)
 
     item.analysis_status = "pending"
     await db.commit()
@@ -247,6 +250,7 @@ async def explain_media(
     if not neighbors:
         return ExplainResponse(needs_more=True)
 
+    await charge_ai(db, "explain", user)
     explanation = await generate_bridge(item, neighbors)
 
     if cached:

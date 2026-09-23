@@ -129,7 +129,7 @@ export default function Home() {
         <h2>Ready to find your next favorite?</h2>
         {user
           ? <Link href="/recommendations" className="btn">Go to your recommendations →</Link>
-          : <Link href="/login" className="btn">Create your free account →</Link>}
+          : <Link href="/login?mode=signup" className="btn">Create your free account →</Link>}
       </section>
     </div>
   )

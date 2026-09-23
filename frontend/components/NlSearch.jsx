@@ -81,7 +81,7 @@ export default function NlSearch({ open = false }) {
       {signupRequired && (
         <p className="nl-search-wall nl-search-msg">
           That’s your free look for today.{' '}
-          <Link href="/login">Sign up to keep exploring — it’s free →</Link>
+          <Link href="/login?mode=signup">Sign up to keep exploring — it’s free →</Link>
         </p>
       )}
       {empty && !loading && (

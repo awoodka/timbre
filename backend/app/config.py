@@ -20,6 +20,13 @@ class Settings(BaseSettings):
     # prod (behind the tunnel's TLS) so the cookie is never sent over plain http.
     cookie_secure: bool = False
     access_token_ttl_days: int = 30
+    # Daily allowances for the actions that call Gemini, now that anyone can sign up
+    # (see services/quota.py). Days are UTC.
+    daily_new_works_per_user: int = 5
+    daily_explanations_per_user: int = 20
+    daily_searches_per_user: int = 30
+    daily_ai_actions_total: int = 300  # site-wide ceiling across every account and visitor
+    signups_per_ip_per_day: int = 3
 
     model_config = {"env_file": str(_env_file)}
 
