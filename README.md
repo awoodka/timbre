@@ -54,7 +54,7 @@ cp .env.example .env     # add GEMINI_API_KEY, TMDB_API_KEY and RAWG_API_KEY
 make up                  # Postgres, the API and the web app, with hot reload
 ```
 
-The backend won't start without a Gemini key. The TMDB and RAWG keys are only needed for film, show and game metadata; books, anime and manga don't need a key. `SECRET_KEY` and `COOKIE_SECURE` only matter for the production stack, and the daily allowances can be changed with the settings in `backend/app/config.py` (for example `DAILY_NEW_WORKS_PER_USER`). The app runs at http://localhost:3000, the API at http://localhost:8000 (with interactive docs at `/docs`), and Postgres on port 5432.
+The backend won't start without a Gemini key. The TMDB and RAWG keys are only needed for film, show and game metadata; books, anime and manga don't need a key. `SECRET_KEY` and `COOKIE_SECURE` only matter for the production stack, and the daily allowances are defaults in `backend/app/config.py` (to override one without editing code, add it, e.g. `DAILY_NEW_WORKS_PER_USER`, to the backend's `environment` in the compose file, since the backend only sees the variables listed there). The app runs at http://localhost:3000, the API at http://localhost:8000 (with interactive docs at `/docs`), and Postgres on port 5432.
 
 To load the starter catalogue, score it and fetch covers:
 
