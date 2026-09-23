@@ -1,6 +1,6 @@
 # Timbre
 
-Timbre finds books, films, shows, anime, manga and games by how they make you feel. It's live at **[timbre.alexwoodka.com](https://timbre.alexwoodka.com)**, where anyone can browse the catalogue, explore the map, compose a mood and run three free-text searches a day. Rating things and getting recommendations for you need an account, and sign-ups are closed for now.
+Timbre finds books, films, shows, anime, manga and games by how they make you feel. It's live at **[timbre.alexwoodka.com](https://timbre.alexwoodka.com)**, where anyone can browse the catalogue, explore the map, compose a mood and run three free-text searches a day. Rating things and getting recommendations for you need a free account.
 
 Most recommendation engines sort by genre, so liking one space opera gets you nine more space operas, whether or not any of them feel like the one you liked. I wanted something that could tell me which game hits the way a particular novel did.
 
@@ -35,7 +35,11 @@ Recommendations for you come from your ratings. When you rate something, you mar
 
 This is a working prototype. I'm building it to the point where I can hand it to friends and have it feel real. The catalogue is 500 works I picked by hand: 100 each of books, films, shows and games, and 50 each of anime and manga. Music is what I most want to add next, since a song has no plot to lean on and would be the cleanest test of the idea.
 
+Accounts are free, but every new work, explanation and described-feeling search is a Gemini call I pay for. So each account gets a daily allowance (5 new works, 20 explanations and 30 searches), and there's a site-wide cap on top of that.
+
 Each fingerprint is one model's reading of a work, so the scores are interpretations. The web context I meant to give the model also mostly didn't arrive. The scraper was supposed to find critical essays and Reddit threads about each work, but 390 of the 500 works got no essays, none got Reddit threads, and a lot of what it did find was off target (dictionary and grammar sites, streaming pages). So most fingerprints rest on what Gemini already knows about the work plus basic metadata.
+
+The profiles are also cut short on purpose. When I tried limiting how long the profiles could be, the descriptions came out noticeably worse, so I let a token cap trim the long ones instead, betting that the dominant emotions come up first. The catch is that Gemini's hidden thinking counts against the same cap, so 207 of the 500 profiles stop mid-sentence, and most of those lose the two summary lines the prompt asks for at the end. The fix I have in mind is to give the thinking its own budget, ask for the summary lines first, and then regenerate and re-score the works that got cut off.
 
 ## Built with
 
@@ -50,7 +54,7 @@ cp .env.example .env     # add GEMINI_API_KEY, TMDB_API_KEY and RAWG_API_KEY
 make up                  # Postgres, the API and the web app, with hot reload
 ```
 
-The backend won't start without a Gemini key. The TMDB and RAWG keys are only needed for film, show and game metadata; books, anime and manga don't need a key. `SECRET_KEY` and `COOKIE_SECURE` only matter for the production stack. The app runs at http://localhost:3000, the API at http://localhost:8000 (with interactive docs at `/docs`), and Postgres on port 5432.
+The backend won't start without a Gemini key. The TMDB and RAWG keys are only needed for film, show and game metadata; books, anime and manga don't need a key. `SECRET_KEY` and `COOKIE_SECURE` only matter for the production stack, and the daily allowances can be changed with the settings in `backend/app/config.py` (for example `DAILY_NEW_WORKS_PER_USER`). The app runs at http://localhost:3000, the API at http://localhost:8000 (with interactive docs at `/docs`), and Postgres on port 5432.
 
 To load the starter catalogue, score it and fetch covers:
 
@@ -63,7 +67,7 @@ Scoring all 500 works means about 1,000 Gemini calls, made one work at a time.
 
 `make rebuild` picks up dependency changes, `make logs` tails everything, `make ps` shows what's running, and `make down` stops the stack (the database volume stays). `make prod` brings up the hardened production stack, which is meant to sit behind a Cloudflare Tunnel.
 
-The backend has a few maintenance scripts. `rescore.py` re-scores the catalogue after a prompt or dimension change and backs up the old scores first, `rebuild_embeddings.py` recomputes the centered vectors, and `eval_recommend.py` prints a report card on recommendation quality. The tests in `backend/tests` run against the seeded database and need at least 40 scored works. pytest isn't in the image, so install it first:
+The backend has a few maintenance scripts. `rescore.py` re-scores the catalogue after a prompt or dimension change and backs up the old scores first, `rebuild_embeddings.py` recomputes the centered vectors, and `eval_recommend.py` prints a report card on recommendation quality. The tests in `backend/tests` run against the seeded database and need at least 40 scored works. Most of them check the scores themselves (does Fleabag come out melancholy, do cozy games cluster), and 30 of the 419 fail against the current catalogue; they're there to show where the scoring falls short, so I haven't loosened them. pytest isn't in the image, so install it first:
 
 ```bash
 docker compose exec backend sh -c "pip install pytest && python -m pytest"

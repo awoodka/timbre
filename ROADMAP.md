@@ -10,11 +10,12 @@ This started as the post-MVP list in April 2026. Updated in September 2026 to sh
 - **Batch re-analysis** when the dimensions or prompts change: `rescore.py` and `rebuild_embeddings.py`.
 - **Accounts and taste.** Accounts, a saved list, a taste profile built from per-emotion ratings, taste modes, the Your Taste page, and a "you are here" marker on the Explore map.
 - **Metadata** from Google Books, Open Library, TMDB, RAWG (instead of IGDB) and Jikan.
-- **User-added works.** Signed-in users can add anything that's missing. Sign-ups on the live site are closed for now.
+- **Open sign-ups and user-added works.** Anyone can make an account and add what's missing. Daily allowances on the Gemini-backed actions (`backend/app/services/quota.py`) keep the bill bounded.
 
 ## Not done
 
 - **Music.** The medium I most want to add next.
+- **Complete profiles.** The profile call's token cap is deliberately tight, but Gemini's thinking tokens share it, so 207 of 500 profiles are cut off, most without their closing summary lines. Give thinking its own budget (or turn it off), ask for the summary lines first, then regenerate and re-score the cut-off works.
 - **Better context for scoring.** The essay and Reddit scraper mostly comes back empty or off target (390 of 500 works got no essays), so most fingerprints rest on Gemini's own knowledge of the work.
 - **Few-shot calibration.** The scoring prompt has anchor values but no scored examples, so runs can drift.
 - **Score corrections.** Let people adjust a work's scores. Today's per-emotion ratings describe your reaction, not the work.

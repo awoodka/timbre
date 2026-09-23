@@ -94,6 +94,16 @@ Then end with exactly these two lines:
 Dominant emotions: <3-6 emotions, most dominant first>
 Arc & resolution: <one line: where it starts emotionally → where it lands>""",
         config=types.GenerateContentConfig(
+            # Deliberately tight. Limiting the profile's length made the descriptions
+            # worse, so this cap trims long ones instead, on the bet that the dominant
+            # emotions come first. gemini-2.5-flash's hidden thinking tokens
+            # count against this budget too, so as of September 2026, 207 of the 500
+            # seeded profiles stop mid-sentence and 198 of those lose the closing
+            # "Dominant emotions" / "Arc & resolution" lines. Scores are made from the
+            # truncated text. Planned fix (see ROADMAP.md): give thinking its own budget
+            # (or turn it off) so the cap only limits visible text, ask for the two
+            # summary lines first so a cut can't drop them, then regenerate and re-score
+            # the cut-off works (rescore.py does this for the whole catalogue).
             max_output_tokens=2000,
             temperature=0.7,
         ),
