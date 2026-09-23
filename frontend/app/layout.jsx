@@ -16,7 +16,7 @@ const inter = Inter({
 
 export const metadata = {
   title: 'Timbre',
-  description: 'Emotional book recommendation engine',
+  description: 'Find books, films, shows, anime, manga and games by how they make you feel.',
 }
 
 // Runs before first paint (no React, no deps): set <html data-theme> from the stored

@@ -115,7 +115,7 @@ export default function Home() {
           <div className="how-step">
             <span className="how-num">2</span>
             <h3>Timbre reads the feeling</h3>
-            <p>Every title is scored across 29 emotional dimensions — the texture of how it feels, not its genre.</p>
+            <p>Every title is scored across 31 emotional dimensions — the texture of how it feels, not its genre.</p>
           </div>
           <div className="how-step">
             <span className="how-num">3</span>
