@@ -1,57 +1,70 @@
 # Timbre
 
-Find your next book, film, game, or show by how it makes you *feel* — not by genre.
+Timbre finds books, films, shows, anime, manga and games by how they make you feel. It's live at **[timbre.alexwoodka.com](https://timbre.alexwoodka.com)**, where anyone can browse the catalogue, explore the map, compose a mood and run three free-text searches a day. Rating things and getting recommendations for you need an account, and sign-ups are closed for now.
 
-Most recommendation engines sort culture into bins. If you liked one space opera, here are nine more space operas. But genre is a filing system, not a feeling. It tells you a book has spaceships in it; it tells you nothing about whether reading it will leave you exhilarated, or hollowed-out, or quietly at peace. Two horror novels can sit on the same shelf and do completely opposite things to you. A literary novel and a video game can do exactly the same thing.
+Most recommendation engines sort by genre, so liking one space opera gets you nine more space operas, whether or not any of them feel like the one you liked. I wanted something that could tell me which game hits the way a particular novel did.
 
-Timbre is built on a simple bet: the thing you're actually chasing when you love a story isn't its genre or even its medium — it's the emotional texture it leaves behind. The held breath of real suspense. The specific ache of nostalgia for a place you've never been. The warmth of a story that feels like being looked after. If you can describe *that*, you can find more of it anywhere — in a manga, a film, a game, a novel.
+The idea is that what you're after when you love something is mostly how it made you feel, and that carries across mediums. So Timbre scores every work on the same set of feelings and puts them all in one shared space, where "what feels like this?" becomes a nearest-neighbor search. Some of what that turns up in the current catalogue:
 
-So Timbre throws out the categories and maps everything into one shared emotional space.
+- Outer Wilds' closest book is Piranesi (0.75 cosine similarity), and Piranesi's closest game is Hollow Knight (0.82).
+- Stardew Valley sits right next to the Barakamon anime (0.92) and Ted Lasso (0.86).
+- Cormac McCarthy's novel The Road comes out closer to No Country for Old Men (0.77) than to its own film adaptation (0.66).
+- The Great Gatsby and Baz Luhrmann's film of it have almost nothing in common (−0.09). The film scores high on joy, frenetic energy and sensuality, while the book is mostly melancholy with a bleak ending.
+
+![The catalogue page](docs/screenshots/catalogue.png)
 
 ## How it works
 
-Every work is read by a language model (Gemini) and scored across **31 emotional dimensions** — roughly two dozen *felt* emotions (isolation, wonder, dread, warmth, grief, awe, tenderness…) plus a handful of structural axes for the *shape* of the experience: how fast it moves, whether it resolves or leaves you raw, whether it climbs toward light or sinks into the dark, how it lands at the end.
+Every work goes through Gemini 2.5 Flash twice. The first call writes a two-paragraph profile of its emotional signature and arc. The second reads that profile and scores the work from 0 to 1 on 31 dimensions: 25 felt emotions (isolation, wonder, dread, melancholy, warmth, nostalgia, grief, hope, stillness and so on) and 6 structural ones for the shape of the experience (pacing, emotional complexity, predictability, catharsis, emotional trajectory, and how the ending lands).
 
-That turns each book, film, or game into a single point in the same 31-dimensional space — a kind of emotional fingerprint. And once everything lives in one space, "what feels like this?" stops being a matter of taste and becomes a measurable question: find the nearest points, regardless of medium. A novel and a game that land close together genuinely *feel* alike, even though nothing on their surface — words on a page versus a controller in your hands — has anything in common.
+Those scores become a 31-dimensional vector, the work's emotional fingerprint, and similarity is the cosine between two vectors, computed in Postgres with pgvector. Before normalizing, each vector has the catalogue's average subtracted from it. That step matters because the catalogue leans dark. The highest averages are tension (0.62) and dread (0.59), the lowest are sensuality (0.13) and serenity (0.15), and without centering, works mostly matched on the heaviness they all share. Since the average moves whenever a work is added, adding one re-centers the whole catalogue.
 
-That's the whole idea. Everything else is making it something you can actually use.
+Recommendations for you come from your ratings. When you rate something, you mark how strongly each of its top six emotions landed for you, from −2 to +2, and you can add stars if you want. After four ratings, Timbre turns those marks into a weight vector and ranks the catalogue against it. It also runs k-means over the works you loved, and if they split cleanly into groups (a silhouette score of at least 0.5), it treats them as up to three separate modes. That way a quiet, melancholy streak and a taste for thrillers each get their own row on your For You page instead of being averaged into one. Each row is spread out with maximal marginal relevance (MMR), which trades a little similarity for variety, so it isn't twelve versions of the same thing.
 
 ## What you can do with it
 
-- **Rate things, and get a taste that's actually yours.** As you tell Timbre what landed for you, it learns the emotional center of gravity of your taste — and instead of flattening you into one "type," it notices that most people contain a few different moods. It splits your taste into a small number of **modes** (the quiet, melancholy you; the one who just wants to be thrilled) and recommends honestly for each, so your comfort-watch night and your edge-of-the-seat night don't get averaged into mush.
-- **Describe a feeling in plain words.** Type *"something tense and lonely that ends on a little bit of hope"* and Timbre reads it into the same emotional space and hands back works that match — across every medium.
-- **Compose a mood by hand.** Turn up the feelings you want, turn down the ones you don't, and watch the recommendations move in real time.
-- **Ask why.** Any recommendation can explain itself — a short, specific note on *why this fits you*, written on the spot from the works you've loved and the emotional thread that connects them to it. "Why this fits you," not "people who bought X also bought Y."
-- **See the whole map.** A 3D view of the entire collection, laid out so that works near each other feel alike, with a *you are here* marker for your own taste. You can see the neighborhoods of feeling and where you live in them.
-- **Read your fingerprint.** A page that turns your ratings into a portrait — the emotions you're drawn to, the ones you steer around, and the shape of what moves you.
+- Rate things by how they made you feel. Your For You page then has a row per mode, plus preset rows for comfort, awe, a thrill, something tender, uplifting endings and a good cry.
+- Describe a feeling in plain words, like "something tense and lonely that ends on a little bit of hope." Gemini turns that into emotions to seek and avoid, an ending tone and an optional medium, and Timbre searches with those. The model never picks titles itself.
+- Compose a mood by hand. Tap feelings to seek or avoid them, choose how you want it to end, and press Find it.
+- Ask why something was recommended. Gemini writes a short note based on the rated works closest to it in feeling. Notes are cached, and you can regenerate one.
+- Explore the catalogue as a 3D map. The axes are distressing to pleasant, calm to intense and intimate to epic, you can swap any of them for a single emotion, and a marker shows where your taste sits.
+- See your own fingerprint on the Your Taste page: the emotions you're drawn to, the ones you steer around, and how you like things to end.
+- Add a work that isn't in the catalogue yet. Timbre looks it up, pulls metadata and a cover, and scores it in the background.
 
-## Where this actually is
+## Where it is
 
-This is a working prototype, not a finished product. I'm building it to the point where I can hand it to friends and have it feel real.
+This is a working prototype. I'm building it to the point where I can hand it to friends and have it feel real. The catalogue is 500 works I picked by hand: 100 each of books, films, shows and games, and 50 each of anime and manga. Music is what I most want to add next, since a song has no plot to lean on and would be the cleanest test of the idea.
 
-The collection right now is **300 works, hand-seeded — 50 each across books, films, shows, anime, manga, and games.** Small enough that I trust what's in it; big enough that the cross-media matching has something to say. Music is what I most want to add next: it's the purest test of the whole premise, since a song has no plot to fall back on — only feeling.
-
-The honest caveats: every work's emotional fingerprint comes from a single model pass, so the scores are interpretations, not measurements, and the recommendations are only as sharp as that read on a corpus this small. I'd rather ship something transparent about how it thinks than something that hides a black box behind a star rating.
+Each fingerprint is one model's reading of a work, so the scores are interpretations. The web context I meant to give the model also mostly didn't arrive. The scraper was supposed to find critical essays and Reddit threads about each work, but 390 of the 500 works got no essays, none got Reddit threads, and a lot of what it did find was off target (dictionary and grammar sites, streaming pages). So most fingerprints rest on what Gemini already knows about the work plus basic metadata.
 
 ## Built with
 
-- **Frontend** — Next.js (App Router): the catalogue, the 3D explorer, the recommendation feed, accounts, dark mode.
-- **Backend** — FastAPI (async), with Gemini doing the emotional scoring, the natural-language search, and the explanations.
-- **Data** — Postgres + pgvector, which does the nearest-neighbor search over the emotional fingerprints right in the database.
+The frontend is Next.js 14 (App Router, plain JSX) with Plotly for the 3D map and Recharts for the charts. The backend is FastAPI with async SQLAlchemy, and the database is Postgres 16 with pgvector. Gemini 2.5 Flash, through the google-genai SDK, does the scoring, the free-text search and the explanations. Metadata and covers come from Google Books and Open Library for books, TMDB for films and shows, RAWG for games, and Jikan (MyAnimeList) for anime and manga.
 
 ## Running it
 
-Everything runs as one Docker Compose stack — Postgres, the API, and the web app together:
+Everything runs as one Docker Compose stack.
 
 ```bash
-cp .env.example .env     # then add your GEMINI_API_KEY (and a SECRET_KEY)
-make up                  # db + backend + frontend, hot-reloading
+cp .env.example .env     # add GEMINI_API_KEY, TMDB_API_KEY and RAWG_API_KEY
+make up                  # Postgres, the API and the web app, with hot reload
 ```
 
-The app comes up at http://localhost:3000. To load the starter collection and score it (needs a valid `GEMINI_API_KEY`):
+The backend won't start without a Gemini key. The TMDB and RAWG keys are only needed for film, show and game metadata; books, anime and manga don't need a key. `SECRET_KEY` and `COOKIE_SECURE` only matter for the production stack. The app runs at http://localhost:3000, the API at http://localhost:8000 (with interactive docs at `/docs`), and Postgres on port 5432.
+
+To load the starter catalogue, score it and fetch covers:
 
 ```bash
 docker compose exec backend python -m seed --analyze
+docker compose exec backend python -m backfill_covers
 ```
 
-`make rebuild` picks up dependency changes, `make logs` tails everything, and `make down` stops the stack (your data persists). There's a hardened `make prod` path as well, meant to go online behind a Cloudflare Tunnel.
+Scoring all 500 works means about 1,000 Gemini calls, made one work at a time.
+
+`make rebuild` picks up dependency changes, `make logs` tails everything, `make ps` shows what's running, and `make down` stops the stack (the database volume stays). `make prod` brings up the hardened production stack, which is meant to sit behind a Cloudflare Tunnel.
+
+The backend has a few maintenance scripts. `rescore.py` re-scores the catalogue after a prompt or dimension change and backs up the old scores first, `rebuild_embeddings.py` recomputes the centered vectors, and `eval_recommend.py` prints a report card on recommendation quality. The tests in `backend/tests` run against the seeded database and need at least 40 scored works. pytest isn't in the image, so install it first:
+
+```bash
+docker compose exec backend sh -c "pip install pytest && python -m pytest"
+```
