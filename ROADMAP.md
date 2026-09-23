@@ -1,36 +1,21 @@
-# Timbre — Post-MVP Roadmap
+# Timbre roadmap
 
-Ideas and enhancements to implement once the MVP is stable and validated.
+This started as the post-MVP list in April 2026. Updated in September 2026 to show what's been built since.
 
----
+## Done
 
-## Retrieval & Similarity
+- **Cross-media.** Films, shows, anime, manga and games sit alongside books in the same 31-dimension space, and recommendations cross mediums freely (`backend/tests/test_cross_media.py` checks this).
+- **Natural-language search.** It works differently from the original plan: Gemini turns the request into emotions to seek and avoid, an ending tone and an optional medium, instead of embedding the query text.
+- **Explanations.** "Why this fits you" is generated on demand from your closest rated works and cached. Re-ranking stayed deterministic (MMR for variety, an optional enjoyment tilt, a penalty for the wrong kind of ending) rather than an LLM pass over the top 20.
+- **Batch re-analysis** when the dimensions or prompts change: `rescore.py` and `rebuild_embeddings.py`.
+- **Accounts and taste.** Accounts, a saved list, a taste profile built from per-emotion ratings, taste modes, the Your Taste page, and a "you are here" marker on the Explore map.
+- **Metadata** from Google Books, Open Library, TMDB, RAWG (instead of IGDB) and Jikan.
+- **User-added works.** Signed-in users can add anything that's missing. Sign-ups on the live site are closed for now.
 
-- **Dual embedding architecture**: Store a high-dimensional text embedding (768/1536-dim from an embedding model) of each emotional profile description alongside the 25 interpretable dimension scores. Use the text embedding for richer similarity search, keep the 25-dimension fingerprint for visualization and explainability.
+## Not done
 
-- **Agentic re-ranking**: After retrieving the top ~20 candidates via embedding similarity, pass them through an LLM to reason about which 5 are the best matches and generate natural language explanations ("these share a specific kind of loneliness — being surrounded by people who don't understand you").
-
-- **Natural language queries**: Let users describe what they want emotionally ("something that feels like a warm bath after a long day") and embed that query against the emotional profile embeddings.
-
-## Cross-Media Expansion (Phase 2)
-
-- Add support for games, film, manga, music
-- The 25 emotional dimensions are already media-agnostic — validate they work across types
-- Cross-media recommendations: "this game feels like reading Norwegian Wood"
-
-## Analysis Pipeline
-
-- Few-shot calibration: include scored examples in the LLM prompt so scoring is more consistent across runs
-- User-submitted emotional corrections: let users adjust scores, building a feedback loop
-- Batch re-analysis when dimensions change
-
-## Social / Personalization
-
-- User accounts and saved libraries
-- Personal emotional preference profiles built from rating history
-- "Emotional taste" visualization — your average fingerprint across rated media
-
-## Data
-
-- Integrate external metadata APIs (Open Library, IGDB, TMDB) for cover art, descriptions, etc.
-- Community-contributed media entries
+- **Music.** The medium I most want to add next.
+- **Better context for scoring.** The essay and Reddit scraper mostly comes back empty or off target (390 of 500 works got no essays), so most fingerprints rest on Gemini's own knowledge of the work.
+- **Few-shot calibration.** The scoring prompt has anchor values but no scored examples, so runs can drift.
+- **Score corrections.** Let people adjust a work's scores. Today's per-emotion ratings describe your reaction, not the work.
+- **A text embedding** of each emotional profile stored next to the 31 scores, for richer similarity search while keeping the scores for visualization and explanations.
